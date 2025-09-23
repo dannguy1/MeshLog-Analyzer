@@ -1,0 +1,2 @@
+# Additional dependencies for security and monitoring enhancements
+psutil>=5.9.0

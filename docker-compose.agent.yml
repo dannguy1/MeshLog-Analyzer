@@ -1,0 +1,138 @@
+version: '3.8'
+
+services:
+  # Existing MeshLog services
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: prplos_backend
+    environment:
+      - DATA_DIR=/app/data
+      - REDIS_URL=redis://redis:6379
+      - WNC_LOG_AGENTS_ENABLED=true
+      - WNC_LOG_AGENTS_URL=http://wnc-log-agents:8001
+      - WNC_LOG_AGENTS_TIMEOUT=300
+    volumes:
+      - meshlog-data:/app/data
+    networks:
+      - meshlog-network
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: prplos_frontend
+    ports:
+      - "80:80"
+    networks:
+      - meshlog-network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: prplos_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - meshlog-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: prplos_celery_worker
+    command: celery -A app.core.celery worker --loglevel=info
+    environment:
+      - DATA_DIR=/app/data
+      - REDIS_URL=redis://redis:6379
+      - WNC_LOG_AGENTS_ENABLED=true
+      - WNC_LOG_AGENTS_URL=http://wnc-log-agents:8001
+    volumes:
+      - meshlog-data:/app/data
+    networks:
+      - meshlog-network
+    depends_on:
+      - redis
+      - backend
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: prplos_celery_beat
+    command: celery -A app.core.celery beat --loglevel=info
+    environment:
+      - DATA_DIR=/app/data
+      - REDIS_URL=redis://redis:6379
+      - WNC_LOG_AGENTS_ENABLED=true
+      - WNC_LOG_AGENTS_URL=http://wnc-log-agents:8001
+    volumes:
+      - meshlog-data:/app/data
+    networks:
+      - meshlog-network
+    depends_on:
+      - redis
+      - backend
+
+  # Agent Service
+  wnc-log-agents:
+    build:
+      context: ../wnc-log-agents  # Adjust path as needed
+      dockerfile: Dockerfile
+    container_name: wnc-log-agents
+    environment:
+      - AGENT_DATA_DIR=/app/data
+      - REDIS_URL=redis://redis:6379
+      - MESHLOG_BACKEND_URL=http://backend:8000
+    volumes:
+      - meshlog-data:/app/data  # Same volume as MeshLog
+    networks:
+      - meshlog-network
+    depends_on:
+      - redis
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  meshlog-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/WNC/LCM-Logs-Data
+  redis-data:
+
+networks:
+  meshlog-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -1,0 +1,164 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Data directories (should be configured via environment)
+data/
+uploads/
+extracted/
+analysis/
+backup/
+temp/
+analysis_results/
+
+# Logs and process files
+logs/
+*.log
+meshlog.log
+pids/
+*.pid
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Node.js (for UI)
+ui/node_modules/
+ui/dist/
+ui/build/
+ui/.env.local
+ui/.env.development.local
+ui/.env.test.local
+ui/.env.production.local
+
+# Environment files (keep template, ignore actual)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Temporary files
+test_*.py
+test_*.js
+test_*.html
+test_*.json
+test_*.markdown
+debug_*.js
+debug_*.py
+
+# Backup directories
+backup_*/
+backup_internal_data_*/
+
+# Demo and validation files (development only)
+demo_*.py
+validate_*.py
+check_*.py
+fix_*.py
+verify_*.py
+
+# Docker
+.dockerignore
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/

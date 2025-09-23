@@ -1,0 +1,704 @@
+{
+  "version": "1.0.0",
+  "description": "MeshLog Agent Pattern Recognition Configuration",
+  "last_updated": "2024-01-15",
+  "patterns": [
+    {
+      "name": "wnc_timestamp",
+      "pattern": "(?P<year>\\d{4}) (?P<month>\\w{3}) (?P<day>\\d{1,2}) (?P<hour>\\d{2}):(?P<minute>\\d{2}):(?P<second>\\d{2})\\.(?P<microsecond>\\d+)",
+      "category": "timestamp",
+      "priority": "CRITICAL",
+      "description": "Standard WNC log timestamp format",
+      "agent_types": ["wnc-acs", "wnc-steering", "wnc-tpyopt"],
+      "validation_samples": [
+        "2024 Jan 10 14:30:15.123456",
+        "2024 Dec 25 09:15:30.789012",
+        "2024 Feb 29 23:59:59.999999"
+      ]
+    },
+    {
+      "name": "mac_address_standard",
+      "pattern": "(?P<mac>[0-9a-f]{2}(:[0-9a-f]{2}){5})",
+      "category": "mac_address",
+      "priority": "HIGH",
+      "description": "Standard MAC address format",
+      "agent_types": ["wnc-acs", "wnc-steering", "wnc-tpyopt"],
+      "validation_samples": [
+        "aa:bb:cc:dd:ee:ff",
+        "11:22:33:44:55:66",
+        "ff:ff:ff:ff:ff:ff"
+      ]
+    },
+    {
+      "name": "wnc_component_acs",
+      "pattern": "wnc-acs:",
+      "category": "component_id",
+      "priority": "CRITICAL",
+      "description": "WNC ACS component identifier",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "2024 Jan 10 14:30:15.123456 router wnc-acs: RADIO aa:bb:cc:dd:ee:ff",
+        "2024 Jan 10 14:30:16.123456 router wnc-acs: trigger ACS"
+      ]
+    },
+    {
+      "name": "wnc_component_steering",
+      "pattern": "wnc-steer:",
+      "category": "component_id",
+      "priority": "CRITICAL",
+      "description": "WNC Steering component identifier",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "2024 Jan 10 14:30:15.123456 router wnc-steer: Processing weak signal client",
+        "2024 Jan 10 14:30:16.123456 router wnc-steer: beacon_measurement_map"
+      ]
+    },
+    {
+      "name": "wnc_component_tpyopt",
+      "pattern": "wnc-tpyopt:",
+      "category": "component_id",
+      "priority": "CRITICAL",
+      "description": "WNC TPYOPT component identifier",
+      "agent_types": ["wnc-tpyopt"],
+      "validation_samples": [
+        "2024 Jan 10 14:30:15.123456 router wnc-tpyopt: State: WaitTrigger --> SendScan",
+        "2024 Jan 10 14:30:16.123456 router wnc-tpyopt: Build topology success!"
+      ]
+    },
+    {
+      "name": "acs_fsm_transition",
+      "pattern": "RADIO (?P<mac>[0-9a-f:]+), FSM: (?P<from_state>\\S+) --> (?P<to_state>\\S+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "ACS FSM state transition",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "RADIO aa:bb:cc:dd:ee:ff, FSM: SERVING  --> CHECKING",
+        "RADIO 11:22:33:44:55:66, FSM: CHECKING  --> SERVING",
+        "RADIO ff:ee:dd:cc:bb:aa, FSM: SERVING  --> SCANNING"
+      ]
+    },
+    {
+      "name": "acs_trigger_event",
+      "pattern": "trigger ACS, reason: (?P<reason>\\S+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "ACS trigger event with reason",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "trigger ACS, reason: PERIOD",
+        "trigger ACS, reason: INTERFERENCE",
+        "trigger ACS, reason: MANUAL"
+      ]
+    },
+    {
+      "name": "acs_countdown",
+      "pattern": "item MAC (?P<mac>[0-9a-f:]+), Sending countdown: (?P<countdown>\\d+), MinInterval delta: (?P<delta>\\d+)",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "ACS countdown message",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "item MAC aa:bb:cc:dd:ee:ff, Sending countdown: 30, MinInterval delta: 5",
+        "item MAC 11:22:33:44:55:66, Sending countdown: 60, MinInterval delta: 10"
+      ]
+    },
+    {
+      "name": "acs_preference_query",
+      "pattern": "trigger CHANNEL_PREFERENCE_QUERY_MESSAGE, radio_mac: (?P<mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "ACS channel preference query",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "trigger CHANNEL_PREFERENCE_QUERY_MESSAGE, radio_mac: aa:bb:cc:dd:ee:ff",
+        "trigger CHANNEL_PREFERENCE_QUERY_MESSAGE, radio_mac: 11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "acs_selection_trigger",
+      "pattern": "trigger CHANNEL_SELECTION_REQUEST_MESSAGE, radio_mac: (?P<mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "ACS channel selection request",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "trigger CHANNEL_SELECTION_REQUEST_MESSAGE, radio_mac: aa:bb:cc:dd:ee:ff",
+        "trigger CHANNEL_SELECTION_REQUEST_MESSAGE, radio_mac: 11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "acs_radio_info",
+      "pattern": "Radio INFO: mac (?P<mac>[0-9a-f:]+), channel (?P<channel>\\d+), freq (?P<freq>[^,]+), bandwidth (?P<bandwidth>[^ ]+)",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "ACS radio information",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "Radio INFO: mac aa:bb:cc:dd:ee:ff, channel 6, freq 2437 MHz, bandwidth 20MHz",
+        "Radio INFO: mac 11:22:33:44:55:66, channel 36, freq 5180 MHz, bandwidth 40MHz"
+      ]
+    },
+    {
+      "name": "acs_channel_change_failure",
+      "pattern": "Channel change failed: (?P<reason>\\S+), radio: (?P<mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "ACS channel change failure with reason",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "Channel change failed: INTERFERENCE_TOO_HIGH, radio: aa:bb:cc:dd:ee:ff",
+        "Channel change failed: NO_BETTER_CHANNEL, radio: 11:22:33:44:55:66",
+        "Channel change failed: POLICY_BLOCKED, radio: ff:ee:dd:cc:bb:aa"
+      ]
+    },
+    {
+      "name": "acs_no_better_channel",
+      "pattern": "No better channel found, current channel (?P<channel>\\d+) optimal",
+      "category": "event_specific", 
+      "priority": "HIGH",
+      "description": "ACS determined current channel is optimal",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "No better channel found, current channel 6 optimal",
+        "No better channel found, current channel 36 optimal"
+      ]
+    },
+    {
+      "name": "acs_interference_threshold",
+      "pattern": "Interference level (?P<level>-?\\d+) dBm below threshold (?P<threshold>-?\\d+) dBm",
+      "category": "event_specific",
+      "priority": "MEDIUM", 
+      "description": "Interference below ACS threshold",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "Interference level -65 dBm below threshold -60 dBm",
+        "Interference level -70 dBm below threshold -65 dBm"
+      ]
+    },
+    {
+      "name": "acs_policy_constraint",
+      "pattern": "ACS blocked by policy: (?P<policy>\\S+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "ACS blocked by policy constraints", 
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "ACS blocked by policy: CHANNEL_BLACKLIST",
+        "ACS blocked by policy: MINIMUM_STABILITY_TIME",
+        "ACS blocked by policy: MANUAL_OVERRIDE"
+      ]
+    },
+    {
+      "name": "acs_dfs_radar_detected",
+      "pattern": "DFS radar detected on channel (?P<channel>\\d+), switching to channel (?P<new_channel>\\d+)",
+      "category": "event_specific",
+      "priority": "CRITICAL",
+      "description": "DFS radar detection and channel switch",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "DFS radar detected on channel 100, switching to channel 36",
+        "DFS radar detected on channel 52, switching to channel 44"
+      ]
+    },
+    {
+      "name": "acs_dfs_channel_available",
+      "pattern": "DFS channel (?P<channel>\\d+) available after (?P<minutes>\\d+) minutes",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "DFS channel becomes available after radar timeout",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "DFS channel 100 available after 10 minutes",
+        "DFS channel 52 available after 30 minutes"
+      ]
+    },
+    {
+      "name": "acs_channel_blacklisted",
+      "pattern": "Channel (?P<channel>\\d+) blacklisted: (?P<reason>\\S+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Channel blacklisted with reason",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "Channel 6 blacklisted: HIGH_INTERFERENCE",
+        "Channel 36 blacklisted: DFS_RADAR",
+        "Channel 149 blacklisted: MANUAL_EXCLUSION"
+      ]
+    },
+    {
+      "name": "acs_algorithm_decision",
+      "pattern": "ACS algorithm selected channel (?P<channel>\\d+) with score (?P<score>\\d+) based on (?P<criteria>\\S+)",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "ACS algorithm decision with scoring",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "ACS algorithm selected channel 6 with score 85 based on INTERFERENCE",
+        "ACS algorithm selected channel 36 with score 92 based on UTILIZATION"
+      ]
+    },
+    {
+      "name": "acs_interference_detected",
+      "pattern": "Interference detected on channel (?P<channel>\\d+): (?P<level>-?\\d+) dBm, source: (?P<source>\\S+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Interference level detection per channel with source",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "Interference detected on channel 6: -65 dBm, source: MICROWAVE",
+        "Interference detected on channel 36: -70 dBm, source: BLUETOOTH",
+        "Interference detected on channel 149: -60 dBm, source: UNKNOWN"
+      ]
+    },
+    {
+      "name": "acs_channel_scan_result", 
+      "pattern": "Channel (?P<channel>\\d+) scan: RSSI (?P<rssi>-?\\d+), noise (?P<noise>-?\\d+), utilization (?P<util>\\d+)%, BSS count (?P<bss_count>\\d+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Comprehensive channel scan results",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "Channel 6 scan: RSSI -45, noise -85, utilization 25%, BSS count 3",
+        "Channel 36 scan: RSSI -50, noise -90, utilization 15%, BSS count 1"
+      ]
+    },
+    {
+      "name": "acs_adjacent_channel_interference",
+      "pattern": "Adjacent channel interference detected: channel (?P<channel>\\d+) affected by channel (?P<adjacent_channel>\\d+)",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "Adjacent channel interference detection",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "Adjacent channel interference detected: channel 6 affected by channel 11",
+        "Adjacent channel interference detected: channel 36 affected by channel 40"
+      ]
+    },
+    {
+      "name": "acs_co_channel_interference",
+      "pattern": "Co-channel interference detected: channel (?P<channel>\\d+) with (?P<interfering_aps>\\d+) interfering APs",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Co-channel interference detection",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "Co-channel interference detected: channel 6 with 2 interfering APs",
+        "Co-channel interference detected: channel 36 with 1 interfering APs"
+      ]
+    },
+    {
+      "name": "acs_cluster_coordination",
+      "pattern": "ACS cluster coordination: radio (?P<radio_mac>[0-9a-f:]+) coordinating with (?P<cluster_size>\\d+) radios",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "Multi-radio ACS coordination",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "ACS cluster coordination: radio aa:bb:cc:dd:ee:ff coordinating with 3 radios",
+        "ACS cluster coordination: radio 11:22:33:44:55:66 coordinating with 5 radios"
+      ]
+    },
+    {
+      "name": "acs_channel_conflict",
+      "pattern": "Channel conflict detected: radio (?P<radio1>[0-9a-f:]+) and radio (?P<radio2>[0-9a-f:]+) both selected channel (?P<channel>\\d+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Channel conflict between radios",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "Channel conflict detected: radio aa:bb:cc:dd:ee:ff and radio 11:22:33:44:55:66 both selected channel 6",
+        "Channel conflict detected: radio ff:ee:dd:cc:bb:aa and radio 22:33:44:55:66:77 both selected channel 36"
+      ]
+    },
+    {
+      "name": "acs_coordination_failure",
+      "pattern": "ACS coordination failed: radio (?P<radio_mac>[0-9a-f:]+) unable to coordinate with cluster",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "ACS coordination failure",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "ACS coordination failed: radio aa:bb:cc:dd:ee:ff unable to coordinate with cluster",
+        "ACS coordination failed: radio 11:22:33:44:55:66 unable to coordinate with cluster"
+      ]
+    },
+    {
+      "name": "acs_predictive_analysis",
+      "pattern": "ACS predictive analysis: channel (?P<channel>\\d+) predicted to have (?P<prediction>\\S+) in (?P<timeframe>\\d+) minutes",
+      "category": "event_specific",
+      "priority": "LOW",
+      "description": "ACS predictive analysis results",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "ACS predictive analysis: channel 6 predicted to have HIGH_INTERFERENCE in 15 minutes",
+        "ACS predictive analysis: channel 36 predicted to have LOW_UTILIZATION in 30 minutes"
+      ]
+    },
+    {
+      "name": "acs_automated_optimization",
+      "pattern": "ACS automated optimization: applied (?P<optimization>\\S+) to radio (?P<radio_mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "LOW",
+      "description": "ACS automated optimization actions",
+      "agent_types": ["wnc-acs"],
+      "validation_samples": [
+        "ACS automated optimization: applied CHANNEL_SWITCH to radio aa:bb:cc:dd:ee:ff",
+        "ACS automated optimization: applied POWER_ADJUSTMENT to radio 11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "steering_weak_signal",
+      "pattern": "Processing weak signal client (?P<mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Steering weak signal detection",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "Processing weak signal client aa:bb:cc:dd:ee:ff",
+        "Processing weak signal client 11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "steering_neighbor_report_request",
+      "pattern": "Neighbor report request.*client=([0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "802.11k neighbor report request",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "Neighbor report request for client=aa:bb:cc:dd:ee:ff",
+        "Neighbor report request from client=11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "steering_neighbor_report_response",
+      "pattern": "Neighbor report response.*client=([0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "802.11k neighbor report response",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "Neighbor report response for client=aa:bb:cc:dd:ee:ff",
+        "Neighbor report response from client=11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "steering_bss_transition_request",
+      "pattern": "BSS transition request.*client=([0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "802.11v BSS transition request",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "BSS transition request for client=aa:bb:cc:dd:ee:ff",
+        "BSS transition request from client=11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "steering_bss_transition_response",
+      "pattern": "BSS transition response.*client=([0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "802.11v BSS transition response",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "BSS transition response for client=aa:bb:cc:dd:ee:ff",
+        "BSS transition response from client=11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "steering_beacon_measurement",
+      "pattern": "beacon_measurement_map.*client=([0-9a-f:]+).*RSSI=(-?\\d+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Beacon measurement with RSSI",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "beacon_measurement_map client=aa:bb:cc:dd:ee:ff RSSI=-65",
+        "beacon_measurement_map client=11:22:33:44:55:66 RSSI=-72"
+      ]
+    },
+    {
+      "name": "steering_client_capability",
+      "pattern": "parsed clientCapability.*mac=([0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "Client capability detection",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "parsed clientCapability for mac=aa:bb:cc:dd:ee:ff",
+        "parsed clientCapability from mac=11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "steering_capability_explicit",
+      "pattern": "(?:parsed\\s+)?clientCapability.*mac=(?P<mac>[0-9a-f:]+)(?:.*rrm[_=](?P<rrm_enabled>\\w+))?(?:.*btm[_=](?P<btm_enabled>\\w+))?",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Explicit client 802.11k/v capability detection with RRM/BTM flags",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "parsed clientCapability mac=aa:bb:cc:dd:ee:ff rrm_enabled=1 btm_enabled=1",
+        "clientCapability mac=11:22:33:44:55:66 rrm=true btm=false"
+      ]
+    },
+    {
+      "name": "steering_rrm_capability",
+      "pattern": "RRM.*(?:capability|enabled|support).*(?:client|mac)[=\\s](?P<mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Direct RRM (802.11k) capability indication",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "RRM capability enabled for client=aa:bb:cc:dd:ee:ff",
+        "RRM support detected mac aa:bb:cc:dd:ee:ff"
+      ]
+    },
+    {
+      "name": "steering_btm_capability",
+      "pattern": "BTM.*(?:capability|enabled|support).*(?:client|mac)[=\\s](?P<mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Direct BTM (802.11v) capability indication",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "BTM capability enabled for client=aa:bb:cc:dd:ee:ff",
+        "BTM support detected mac aa:bb:cc:dd:ee:ff"
+      ]
+    },
+    {
+      "name": "steering_neighbor_report_failed",
+      "pattern": "neighbor.*report.*(?:failed|timeout|unsupported).*(?:client|mac)[=\\s](?P<mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "Neighbor report failure indicates lack of 802.11k support",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "neighbor report failed for client=aa:bb:cc:dd:ee:ff",
+        "neighbor report timeout mac aa:bb:cc:dd:ee:ff"
+      ]
+    },
+    {
+      "name": "steering_bss_transition_failed",
+      "pattern": "(?:bss|BSS).*transition.*(?:failed|rejected|unsupported).*(?:client|mac)[=\\s](?P<mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "BSS transition failure indicates lack of 802.11v support",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "BSS transition failed for client=aa:bb:cc:dd:ee:ff",
+        "bss transition rejected by mac aa:bb:cc:dd:ee:ff"
+      ]
+    },
+    {
+      "name": "steering_beacon_report",
+      "pattern": "beacon.*(?:request|report).*(?:client|mac)[=\\s](?P<mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "802.11k beacon report capability indicator",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "beacon report request from client=aa:bb:cc:dd:ee:ff",
+        "beacon request sent to mac aa:bb:cc:dd:ee:ff"
+      ]
+    },
+    {
+      "name": "steering_success",
+      "pattern": "Successfully steered.*client=([0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Successful steering operation",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "Successfully steered client=aa:bb:cc:dd:ee:ff",
+        "Successfully steered client=11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "steering_failure",
+      "pattern": "Steering failed.*client=([0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "Failed steering operation",
+      "agent_types": ["wnc-steering"],
+      "validation_samples": [
+        "Steering failed for client=aa:bb:cc:dd:ee:ff",
+        "Steering failed for client=11:22:33:44:55:66"
+      ]
+    },
+    {
+      "name": "tpyopt_fsm_transition",
+      "pattern": "State: (?P<from_state>\\S+) --> (?P<to_state>\\S+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "TPYOPT FSM state transition",
+      "agent_types": ["wnc-tpyopt"],
+      "validation_samples": [
+        "State: WaitTrigger --> SendScan",
+        "State: SendScan --> WaitResponse",
+        "State: WaitResponse --> WaitTrigger"
+      ]
+    },
+    {
+      "name": "tpyopt_optimization_trigger",
+      "pattern": "Active AP number is (?P<num>\\d+) >= (?P<threshold>\\d+), need to trigger topology optimization",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "TPYOPT optimization trigger",
+      "agent_types": ["wnc-tpyopt"],
+      "validation_samples": [
+        "Active AP number is 15 >= 10, need to trigger topology optimization",
+        "Active AP number is 25 >= 20, need to trigger topology optimization"
+      ]
+    },
+    {
+      "name": "tpyopt_periodic_check",
+      "pattern": "It is time to check connection status",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "TPYOPT periodic connection check",
+      "agent_types": ["wnc-tpyopt"],
+      "validation_samples": [
+        "It is time to check connection status",
+        "It is time to check connection status for all devices"
+      ]
+    },
+    {
+      "name": "tpyopt_scan_trigger_success",
+      "pattern": "All active device scan trigger success",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "TPYOPT scan trigger success",
+      "agent_types": ["wnc-tpyopt"],
+      "validation_samples": [
+        "All active device scan trigger success",
+        "All active device scan trigger success for topology optimization"
+      ]
+    },
+    {
+      "name": "tpyopt_build_topology_success",
+      "pattern": "Build topology success!",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "TPYOPT topology build success",
+      "agent_types": ["wnc-tpyopt"],
+      "validation_samples": [
+        "Build topology success!",
+        "Build topology success! with 5 devices"
+      ]
+    },
+    {
+      "name": "tpyopt_build_topology_fail",
+      "pattern": "Build topology fail!",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "TPYOPT topology build failure",
+      "agent_types": ["wnc-tpyopt"],
+      "validation_samples": [
+        "Build topology fail!",
+        "Build topology fail! insufficient devices"
+      ]
+    },
+    {
+      "name": "tpyopt_roaming_command",
+      "pattern": "Send roaming command (?P<from_mac>[0-9a-f:]+) --> (?P<to_mac>[0-9a-f:]+)",
+      "category": "event_specific",
+      "priority": "HIGH",
+      "description": "TPYOPT roaming command",
+      "agent_types": ["wnc-tpyopt"],
+      "validation_samples": [
+        "Send roaming command aa:bb:cc:dd:ee:ff --> 11:22:33:44:55:66",
+        "Send roaming command 11:22:33:44:55:66 --> ff:ee:dd:cc:bb:aa"
+      ]
+    },
+    {
+      "name": "tpyopt_packet_loss",
+      "pattern": "(?P<mac>[0-9a-f:]+)'s Packet loss\\((?P<loss>\\d+) %\\) is more than (?P<threshold>\\d+) %, transmit error: (?P<tx_error>\\d+) %, recevied error: (?P<rx_error>\\d+) %",
+      "category": "event_specific",
+      "priority": "MEDIUM",
+      "description": "TPYOPT packet loss detection",
+      "agent_types": ["wnc-tpyopt"],
+      "validation_samples": [
+        "aa:bb:cc:dd:ee:ff's Packet loss(15 %) is more than 10 %, transmit error: 5 %, recevied error: 10 %",
+        "11:22:33:44:55:66's Packet loss(25 %) is more than 20 %, transmit error: 8 %, recevied error: 17 %"
+      ]
+    },
+    {
+      "name": "message_format_info",
+      "pattern": " - \\[i\\]",
+      "category": "message_format",
+      "priority": "MEDIUM",
+      "description": "Information message format marker",
+      "agent_types": ["wnc-acs", "wnc-tpyopt"],
+      "validation_samples": [
+        "2024 Jan 10 14:30:15.123456 router wnc-acs: - [i] RADIO aa:bb:cc:dd:ee:ff",
+        "2024 Jan 10 14:30:15.123456 router wnc-tpyopt: - [i] State: WaitTrigger --> SendScan"
+      ]
+    },
+    {
+      "name": "message_format_warning",
+      "pattern": " - \\[!\\]",
+      "category": "message_format",
+      "priority": "MEDIUM",
+      "description": "Warning message format marker",
+      "agent_types": ["wnc-acs", "wnc-tpyopt"],
+      "validation_samples": [
+        "2024 Jan 10 14:30:15.123456 router wnc-acs: - [!] Failed to trigger ACS",
+        "2024 Jan 10 14:30:15.123456 router wnc-tpyopt: - [!] Build topology fail!"
+      ]
+    },
+    {
+      "name": "message_format_error",
+      "pattern": " - \\[x\\]",
+      "category": "message_format",
+      "priority": "MEDIUM",
+      "description": "Error message format marker",
+      "agent_types": ["wnc-acs", "wnc-tpyopt"],
+      "validation_samples": [
+        "2024 Jan 10 14:30:15.123456 router wnc-acs: - [x] Critical ACS error",
+        "2024 Jan 10 14:30:15.123456 router wnc-tpyopt: - [x] Topology optimization failed"
+      ]
+    }
+  ],
+  "optimization_settings": {
+    "enable_caching": true,
+    "cache_size": 1000,
+    "performance_monitoring": true,
+    "auto_optimization": true,
+    "pattern_learning": false,
+    "batch_processing_threshold": 100
+  },
+  "validation_rules": {
+    "timestamp_patterns": {
+      "required_groups": ["year", "month", "day", "hour", "minute", "second"],
+      "format_validation": true
+    },
+    "mac_address_patterns": {
+      "format_validation": true,
+      "required_length": 17
+    },
+    "component_id_patterns": {
+      "must_contain": ["wnc-"],
+      "case_sensitive": false
+    }
+  },
+  "agent_specific_settings": {
+    "wnc-acs": {
+      "critical_patterns": ["wnc_component_acs", "acs_fsm_transition", "acs_trigger_event", "acs_dfs_radar_detected", "acs_channel_change_failure"],
+      "performance_threshold": 0.01,
+      "batch_size": 500
+    },
+    "wnc-steering": {
+      "critical_patterns": ["wnc_component_steering", "steering_weak_signal", "steering_beacon_measurement"],
+      "performance_threshold": 0.01,
+      "batch_size": 500
+    },
+    "wnc-tpyopt": {
+      "critical_patterns": ["wnc_component_tpyopt", "tpyopt_fsm_transition", "tpyopt_optimization_trigger"],
+      "performance_threshold": 0.01,
+      "batch_size": 500
+    }
+  }
+}
+
