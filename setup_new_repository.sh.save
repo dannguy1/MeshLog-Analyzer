@@ -1,0 +1,107 @@
+#!/bin/bash
+
+# WNC LCM Log Analysis System - New Repository Setup Script
+# This script helps configure the repository after creating it on GitHub
+
+set -e
+
+echo "🚀 WNC LCM Log Analysis System - Repository Setup"
+echo "=================================================="
+
+# Function to prompt for user input
+prompt_for_input() {
+    local prompt_message="$1"
+    local var_name="$2"
+    echo -n "$prompt_message: "
+    read -r value
+    eval "$var_name='$value'"
+}
+
+# Get repository information from user
+echo ""
+echo "Please provide your new GitHub repository information:"
+echo ""
+
+prompt_for_input "GitHub username" GITHUB_USERNAME
+prompt_for_input "Repository name" REPO_NAME
+
+# Construct the repository URL
+REPO_URL="https://github.com/${GITHUB_USERNAME}/${REPO_NAME}.git"
+
+qecho ""
+echo "Repository URL: $REPO_URL"
+echo ""
+
+# Confirm before proceeding
+echo -n "Is this correct? (y/N): "
+read -r confirmation
+if [[ ! "$confirmation" =~ ^[Yy]$ ]]; then
+    echo "Aborted. Please run the script again with the correct information."
+    exit 1
+fi
+
+echo ""
+echo "🔗 Configuring git remote..."
+
+# Check if remote origin already exists
+if git remote get-url origin >/dev/null 2>&1; then
+    echo "⚠️  Remote 'origin' already exists. Removing it..."
+    git remote remove origin
+fi
+
+# Add the new remote
+git remote add origin "$REPO_URL"
+
+# Verify the remote was added
+echo "✅ Remote added successfully:"
+git remote -v
+
+echo ""
+echo "📤 Preparing to push to GitHub..."
+
+# Rename branch to main if it's master
+current_branch=$(git branch --show-current)
+if [ "$current_branch" = "master" ]; then
+    echo "🔄 Renaming branch from master to main..."
+    git branch -m main
+fi
+
+echo ""
+echo "🚀 Pushing to GitHub..."
+echo "Note: You may be prompted for your GitHub credentials."
+echo ""
+
+# Push to GitHub
+if git push -u origin main; then
+    echo ""
+    echo "🎉 SUCCESS! Repository has been pushed to GitHub."
+    echo ""
+    echo "📋 Next Steps:"
+    echo "1. Visit: https://github.com/${GITHUB_USERNAME}/${REPO_NAME}"
+    echo "2. Verify all files are present"
+    echo "3. Update repository description and settings as needed"
+    echo "4. Set up branch protection rules if required"
+    echo "5. Share the repository with team members"
+    echo ""
+    echo "📚 Development Setup:"
+    echo "Team members can now clone and set up the repository:"
+    echo "  git clone $REPO_URL"
+    echo "  cd $REPO_NAME"
+    echo "  ./scripts/setup_dev.sh"
+    echo ""
+else
+    echo ""
+    echo "❌ Failed to push to GitHub."
+    echo "Common solutions:"
+    echo "1. Check your GitHub credentials"
+    echo "2. Ensure the repository exists on GitHub"
+    echo "3. Verify you have write access to the repository"
+    echo "4. Try using a personal access token instead of password"
+    echo ""
+    echo "Manual push command:"
+    echo "  git push -u origin main"
+fi
+
+echo ""
+echo "📖 For detailed migration information, see:"
+echo "  REPOSITORY_MIGRATION_GUIDE.md"
