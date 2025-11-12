@@ -439,9 +439,11 @@ Mesh-Log/
 │   └── extracted/         # Legacy extractions (old)
 ├── logs/                  # Application logs
 ├── docs/                  # Documentation
-│   ├── extraction_reuse_implementation.md
-│   ├── extraction_reuse_summary.md
-│   └── cleanup_deployment_guide.md
+│   ├── overview/          # Executive summaries, concept briefs
+│   ├── architecture/      # Specifications, gap analyses, API notes
+│   ├── analysis/          # Pattern frameworks and agent docs
+│   ├── operations/        # Deployment, migration, security guides
+│   └── guides/            # End-user feature guides
 ├── requirements-minimal.txt # Python dependencies
 ├── requirements.txt      # Full Python dependencies
 ├── docker-compose.yml     # Base Docker Compose configuration
@@ -452,7 +454,6 @@ Mesh-Log/
 ├── health-check.sh       # System health monitoring script
 ├── env.production        # Production environment configuration
 ├── .dockerignore         # Docker build optimization
-├── DEPLOYMENT.md         # Comprehensive deployment guide
 └── README.md             # This file
 ```
 
@@ -658,7 +659,7 @@ tar -czf backup-$(date +%Y%m%d).tar.gz data/ logs/ uploads/ analysis_results/
 tar -xzf backup-20240101.tar.gz
 ```
 
-For detailed deployment information, see [DEPLOYMENT.md](DEPLOYMENT.md).
+For detailed deployment information, see [Deployment Guide](docs/operations/DEPLOYMENT_GUIDE.md).
 
 ## 🚀 Development Scenarios
 

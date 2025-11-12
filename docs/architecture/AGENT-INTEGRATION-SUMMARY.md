@@ -8,7 +8,7 @@ This document summarizes the containerized agent integration setup for the prplO
 
 ### 1. Updated Agent Integration Specification
 
-**File**: `docs/agent-integration-specification-containerized.md`
+**File**: `architecture/AGENT-INTEGRATION-SUMMARY.md`
 
 **Key Updates**:
 - **Containerized Architecture**: Updated data flow to use Docker containers and shared volumes

@@ -144,12 +144,13 @@ Mesh-Log/
 │   ├── package.json
 │   ├── Dockerfile
 │   └── nginx.conf
-├── docs/                         # Documentation
-│   ├── agent-integration-specification-containerized.md
-│   ├── agent-architecture-plan.md
-│   ├── migration-guide.md
-│   ├── meshlog-integration-plan.md
-│   └── SYSTEM_SUMMARY.md
+├── docs/                         # Documentation hub
+│   ├── overview/                 # Executive and concept summaries
+│   ├── architecture/             # System specifications and gap analyses
+│   ├── analysis/                 # Analytics frameworks and agent docs
+│   │   └── agents/               # Domain-specific agent implementations
+│   ├── operations/               # Deployment, migration, security, project ops
+│   └── guides/                   # User-facing product guides
 ├── scripts/                      # Deployment scripts
 │   ├── deploy-agent.sh
 │   └── health-check-agent.sh
@@ -159,8 +160,9 @@ Mesh-Log/
 ├── Dockerfile.backend            # Backend container
 ├── requirements.txt              # Python dependencies
 ├── deploy.sh                     # Main deployment script
-├── DEPLOYMENT.md                 # Deployment guide
-├── CONTAINERIZED-DEPLOYMENT.md   # Containerized deployment guide
+├── operations/DEPLOYMENT.md      # Deployment scripts reference
+├── operations/DEPLOYMENT_GUIDE.md # Comprehensive deployment guide
+├── operations/CONTAINERIZED-DEPLOYMENT.md   # Containerized deployment guide
 └── README.md                     # Main documentation
 ```
 
@@ -551,45 +553,45 @@ WNC_LOG_AGENTS_TIMEOUT=300
 
 ### Core Documentation
 - **[README.md](../README.md)**: Main project documentation and quick start guide
-- **[DEPLOYMENT.md](DEPLOYMENT.md)**: Comprehensive deployment instructions
-- **[PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)**: Production-specific deployment guide
+- **[DEPLOYMENT.md](../operations/DEPLOYMENT.md)**: Comprehensive deployment instructions
+- **[PRODUCTION_DEPLOYMENT.md](../operations/PRODUCTION_DEPLOYMENT.md)**: Production-specific deployment guide
 
 ### Agent Integration Documentation
-- **[AGENT-INTEGRATION-SUMMARY.md](AGENT-INTEGRATION-SUMMARY.md)**: Agent integration implementation summary
-- **[AGENT_ANALYSIS_SYSTEM_GUIDE.md](AGENT_ANALYSIS_SYSTEM_GUIDE.md)**: Complete guide to integrated and agent-based analysis
+- **[AGENT-INTEGRATION-SUMMARY.md](../architecture/AGENT-INTEGRATION-SUMMARY.md)**: Agent integration implementation summary
+- **[AGENT_ANALYSIS_SYSTEM_GUIDE.md](../architecture/AGENT_ANALYSIS_SYSTEM_GUIDE.md)**: Complete guide to integrated and agent-based analysis
 
 ### Agent Implementation Documentation
-- **[WNC ACS Agent](agents/wnc-acs-implementation.md)**: Auto Channel Selection analysis agent implementation
-- **[WNC Steering Agent](agents/wnc-steering-implementation.md)**: WiFi client steering analysis agent implementation
-- **[WNC TPYOPT Agent](agents/wnc-tpyopt-implementation.md)**: Topology optimization analysis agent implementation
+- **[WNC ACS Agent](../analysis/agents/wnc-acs-implementation.md)**: Auto Channel Selection analysis agent implementation
+- **[WNC Steering Agent](../analysis/agents/wnc-steering-implementation.md)**: WiFi client steering analysis agent implementation
+- **[WNC TPYOPT Agent](../analysis/agents/wnc-tpyopt-implementation.md)**: Topology optimization analysis agent implementation
 
 ### Implementation Status
-- **[INTEGRATED_AGENT_IMPLEMENTATION_COMPLETE.md](../INTEGRATED_AGENT_IMPLEMENTATION_COMPLETE.md)**: Agent implementation completion status
+- **[INTEGRATED_AGENT_IMPLEMENTATION_COMPLETE.md](../architecture/INTEGRATED_AGENT_IMPLEMENTATION_COMPLETE.md)**: Agent implementation completion status
 
 ### Technical Reference
-- **[API_CONSOLIDATION_COMPLETE.md](../API_CONSOLIDATION_COMPLETE.md)**: API consolidation status
-- **[AGENT_REGISTRY_METHODS_ADDRESSED.md](../AGENT_REGISTRY_METHODS_ADDRESSED.md)**: Agent registry implementation details
-- **[time_sequence_filtering_guide.md](time_sequence_filtering_guide.md)**: Time sequence filtering implementation
-- **[DATA_DIR_CONFIGURATION.md](DATA_DIR_CONFIGURATION.md)**: Data directory configuration guide
+- **[API_CONSOLIDATION_COMPLETE.md](../architecture/API_CONSOLIDATION_COMPLETE.md)**: API consolidation status
+- **[AGENT_REGISTRY_METHODS_ADDRESSED.md](../architecture/AGENT_REGISTRY_METHODS_ADDRESSED.md)**: Agent registry implementation details
+- **[time_sequence_filtering_guide.md](../guides/time_sequence_filtering_guide.md)**: Time sequence filtering implementation
+- **[DATA_DIR_CONFIGURATION.md](../operations/DATA_DIR_CONFIGURATION.md)**: Data directory configuration guide
 
 ### Development & Operations
-- **[DEV_SCRIPTS_README.md](DEV_SCRIPTS_README.md)**: Development scripts and utilities
-- **[cleanup_deployment_guide.md](cleanup_deployment_guide.md)**: Deployment cleanup procedures
-- **[CLEANUP_OPTIMIZATION_SUMMARY.md](CLEANUP_OPTIMIZATION_SUMMARY.md)**: System optimization summary
+- **[DEV_SCRIPTS_README.md](../operations/DEV_SCRIPTS_README.md)**: Development scripts and utilities
+- **[cleanup_deployment_guide.md](../operations/cleanup_deployment_guide.md)**: Deployment cleanup procedures
+- **[CLEANUP_OPTIMIZATION_SUMMARY.md](../operations/CLEANUP_OPTIMIZATION_SUMMARY.md)**: System optimization summary
 
 ## 📞 Support and Contact
 
 ### Technical Support
 - **Documentation**: See [Documentation](#-documentation) section above for comprehensive guides
-- **Deployment**: [DEPLOYMENT.md](DEPLOYMENT.md) and [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)
-- **Agent Integration**: [AGENT-INTEGRATION-SUMMARY.md](AGENT-INTEGRATION-SUMMARY.md)
-- **Troubleshooting**: Check implementation status files (*.md) in project root
+- **Deployment**: [DEPLOYMENT.md](../operations/DEPLOYMENT.md), [DEPLOYMENT_GUIDE.md](../operations/DEPLOYMENT_GUIDE.md), and [PRODUCTION_DEPLOYMENT.md](../operations/PRODUCTION_DEPLOYMENT.md)
+- **Agent Integration**: [AGENT-INTEGRATION-SUMMARY.md](../architecture/AGENT-INTEGRATION-SUMMARY.md)
+- **Troubleshooting**: Check implementation status files (*.md) in documentation folders
 
 ### Development Support
 - **Code Repository**: Open source codebase
-- **Implementation Status**: See [INTEGRATED_AGENT_IMPLEMENTATION_COMPLETE.md](../INTEGRATED_AGENT_IMPLEMENTATION_COMPLETE.md)
-- **API Reference**: [API_CONSOLIDATION_COMPLETE.md](../API_CONSOLIDATION_COMPLETE.md)
-- **Development Environment**: [DEV_SCRIPTS_README.md](DEV_SCRIPTS_README.md)
+- **Implementation Status**: See [INTEGRATED_AGENT_IMPLEMENTATION_COMPLETE.md](../architecture/INTEGRATED_AGENT_IMPLEMENTATION_COMPLETE.md)
+- **API Reference**: [API_CONSOLIDATION_COMPLETE.md](../architecture/API_CONSOLIDATION_COMPLETE.md)
+- **Development Environment**: [DEV_SCRIPTS_README.md](../operations/DEV_SCRIPTS_README.md)
 
 ---
 

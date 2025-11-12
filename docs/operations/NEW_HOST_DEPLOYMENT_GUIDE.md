@@ -411,7 +411,7 @@ After successful deployment:
 ## 📞 Support and Documentation
 
 ### Additional Documentation
-- `DEPLOYMENT.md` - Detailed deployment options
+- `DEPLOYMENT_GUIDE.md` - Detailed deployment options
 - `CONTAINERIZED-DEPLOYMENT.md` - Advanced container configuration
 - `README.md` - Project overview and features
 - `docs/` - Comprehensive system documentation

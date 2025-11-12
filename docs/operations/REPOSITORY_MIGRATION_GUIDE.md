@@ -182,6 +182,6 @@ The migration is considered successful when:
 
 ## Contact Information
 For questions about this migration or the WNC LCM Log Analysis System:
-- Technical Documentation: See \`docs/\` directory
-- System Overview: See \`README.md\`
-- Deployment Guide: See \`DEPLOYMENT.md\`
+- Technical Documentation: See `docs/` directory
+- System Overview: See `README.md`
+- Deployment Guide: See `DEPLOYMENT_GUIDE.md`

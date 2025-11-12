@@ -6832,7 +6832,7 @@ class DisasterRecoveryService:
 
 - [System Summary](SYSTEM_SUMMARY.md) - Complete system implementation overview
 - [Agent Analysis System Guide](AGENT_ANALYSIS_SYSTEM_GUIDE.md) - Detailed agent system documentation
-- [Deployment Guide](DEPLOYMENT.md) - System deployment instructions
+- [Deployment Guide](../operations/DEPLOYMENT.md) - System deployment instructions
 - [API Documentation](API_CONSOLIDATION_COMPLETE.md) - API reference and examples
 
 ---
