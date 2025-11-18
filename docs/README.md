@@ -10,6 +10,7 @@ MeshLog documentation is organized by purpose. Use the sections below to quickly
 
 ## Architecture
 - **[SYSTEM_ARCHITECTURE_SPECIFICATION.md](architecture/SYSTEM_ARCHITECTURE_SPECIFICATION.md)** – Canonical system architecture reference
+- **[APPLICATION_AGENT_ARCHITECTURE.md](architecture/APPLICATION_AGENT_ARCHITECTURE.md)** – Detailed Application/Agent concept specification for extensions
 - **[SYSTEM_ARCHITECTURE_GAP_ANALYSIS.md](architecture/SYSTEM_ARCHITECTURE_GAP_ANALYSIS.md)** – Traceability between spec and implementation
 - **[SYSTEM_ARCHITECTURE_IMPLEMENTATION_PLAN.md](architecture/SYSTEM_ARCHITECTURE_IMPLEMENTATION_PLAN.md)** – Work plan for addressing architecture gaps
 - **[AGENT_ANALYSIS_SYSTEM_GUIDE.md](architecture/AGENT_ANALYSIS_SYSTEM_GUIDE.md)** – Hybrid agent execution architecture
@@ -19,6 +20,7 @@ MeshLog documentation is organized by purpose. Use the sections below to quickly
 - **[INTEGRATED_AGENT_IMPLEMENTATION_COMPLETE.md](architecture/INTEGRATED_AGENT_IMPLEMENTATION_COMPLETE.md)** – Integrated agent implementation summary
 
 ## Analysis & Agents
+- **[APPLICATION_AGENT_DOMAIN_DETAILS.md](analysis/APPLICATION_AGENT_DOMAIN_DETAILS.md)** – Domain-specific details for each application/agent pair (discovery, events, analysis)
 - **[ADVANCED_PATTERN_RECOGNITION_FRAMEWORK.md](analysis/ADVANCED_PATTERN_RECOGNITION_FRAMEWORK.md)** – Shared analytics framework design
 - **[PATTERN_RECOGNITION_MIGRATION_GUIDE.md](analysis/PATTERN_RECOGNITION_MIGRATION_GUIDE.md)** – Migration steps for agents
 - **[802.11kv_CAPABILITY_INTEGRATION_SUMMARY.md](analysis/802.11kv_CAPABILITY_INTEGRATION_SUMMARY.md)** – Steering capability integration summary

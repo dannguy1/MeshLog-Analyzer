@@ -316,32 +316,77 @@ class WNCSteeringAgent(AgentInterface):
             self.logger.warning(f"Error testing steering patterns on line: {e}")
     
     def _extract_timestamp(self, line: str) -> str:
-        """Extract timestamp from log line using pattern framework"""
-        # Use pattern recognition for timestamp extraction
-        timestamp_result = self.pattern_interface.parse_log_line(line)
+        """Extract timestamp from log line using pattern framework with consistent ISO format"""
+        try:
+            # Use pattern recognition for timestamp extraction
+            timestamp_result = self.pattern_interface.parse_log_line(line)
+            
+            if timestamp_result['status'] == 'matched' and 'timestamp' in timestamp_result['pattern_name']:
+                match_data = timestamp_result.get('match_data', {})
+                # Format timestamp with microseconds if present (preserve month name format)
+                if all(key in match_data for key in ['year', 'month', 'day', 'hour', 'minute', 'second']):
+                    microsecond = match_data.get('microsecond', '0')
+                    if microsecond:
+                        # Pad to 6 digits if needed
+                        microsecond = microsecond.ljust(6, '0')[:6]
+                        return f"{match_data['year']} {match_data['month']} {match_data['day']} {match_data['hour']}:{match_data['minute']}:{match_data['second']}.{microsecond}"
+                    else:
+                        return f"{match_data['year']} {match_data['month']} {match_data['day']} {match_data['hour']}:{match_data['minute']}:{match_data['second']}"
+        except Exception as e:
+            self.logger.debug(f"Pattern framework timestamp extraction failed: {e}")
         
-        if timestamp_result['status'] == 'matched' and 'timestamp' in timestamp_result['pattern_name']:
-            match_data = timestamp_result.get('match_data', {})
-            # Format timestamp from match data
-            if all(key in match_data for key in ['year', 'month', 'day', 'hour', 'minute', 'second']):
-                return f"{match_data['year']}-{match_data['month']}-{match_data['day']} {match_data['hour']}:{match_data['minute']}:{match_data['second']}"
+        # Fallback: try to extract timestamp with regex (handle microseconds)
+        import re
+        timestamp_patterns = [
+            (r'(\d{4})\s+(\w{3})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\.(\d+)', True),   # 2023 Dec 15 14:30:25.123456
+            (r'(\d{4})\s+(\w{3})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})', False),         # 2023 Dec 15 14:30:25
+        ]
+        
+        for pattern, has_microseconds in timestamp_patterns:
+            match = re.search(pattern, line)
+            if match:
+                groups = match.groups()
+                if has_microseconds and len(groups) >= 7:
+                    year, month, day, hour, minute, second, microsecond = groups[:7]
+                    microsecond = microsecond.ljust(6, '0')[:6]
+                    return f"{year} {month} {day} {hour}:{minute}:{second}.{microsecond}"
+                elif len(groups) >= 6:
+                    year, month, day, hour, minute, second = groups[:6]
+                    return f"{year} {month} {day} {hour}:{minute}:{second}"
+        
         return ""
     
     def _process_pattern_match(self, result: dict, line: str, line_num: int) -> None:
         """Process a pattern match from the pattern framework and update tracking data"""
         pattern_name = result['pattern_name']
         match_data = result.get('match_data', {})
-        timestamp = match_data.get('timestamp', '')
         
-        # Extract client MAC from match data
+        # Extract timestamp from line if not in match_data
+        timestamp = match_data.get('timestamp', '')
+        if not timestamp:
+            timestamp = self._extract_timestamp(line)
+        
+        # Extract client MAC from match data - try multiple keys and fallback patterns
         client_mac = None
         for key in ['mac', 'client_mac', 'client']:
             if key in match_data:
                 client_mac = match_data[key].lower()
                 break
         
+        # Fallback: try to extract MAC from raw line if not found in match_data
         if not client_mac:
-            return
+            import re
+            mac_pattern = r'([0-9a-f]{2}(:[0-9a-f]{2}){5})'
+            mac_match = re.search(mac_pattern, line, re.IGNORECASE)
+            if mac_match:
+                client_mac = mac_match.group(1).lower()
+        
+        # If still no MAC found, try to extract from common patterns in the line
+        if not client_mac:
+            # Some events might not have MAC addresses (e.g., general steering events)
+            # Log but don't skip - use a placeholder for tracking
+            self.logger.debug(f"No MAC address found in pattern match for line {line_num}: {pattern_name}")
+            client_mac = 'unknown'
         
         # Create event
         event = {

@@ -109,43 +109,67 @@ class TPYOPTLogParser:
         return event
     
     def _determine_event_type(self, pattern_name: str) -> str:
-        """Determine event type from pattern name"""
-        if 'fsm_transition' in pattern_name.lower():
+        """Determine event type from pattern name with improved matching"""
+        pattern_lower = pattern_name.lower()
+        
+        # Check for specific event types first (more specific patterns)
+        if 'fsm_transition' in pattern_lower or ('fsm' in pattern_lower and 'transition' in pattern_lower):
             return 'fsm_transition'
-        elif 'roaming_command' in pattern_name.lower():
+        elif 'roaming_command' in pattern_lower or ('roaming' in pattern_lower and 'command' in pattern_lower):
             return 'roaming_command'
-        elif 'optimization' in pattern_name.lower():
-            return 'optimization'
-        elif 'packet_loss' in pattern_name.lower():
-            return 'packet_loss'
-        elif 'topology' in pattern_name.lower():
+        elif 'build_topology' in pattern_lower:
+            return 'topology_build'
+        elif 'topology' in pattern_lower:
             return 'topology_change'
-        elif 'failure' in pattern_name.lower() or 'error' in pattern_name.lower():
+        elif 'optimization_trigger' in pattern_lower or 'optimization' in pattern_lower:
+            return 'optimization'
+        elif 'packet_loss' in pattern_lower:
+            return 'packet_loss'
+        elif 'scan_trigger' in pattern_lower:
+            return 'scan_event'
+        elif 'failure' in pattern_lower or 'error' in pattern_lower or 'fail' in pattern_lower:
             return 'failure'
         else:
             return 'general'
     
     def _extract_timestamp(self, line: str) -> str:
-        """Extract timestamp from log line"""
+        """Extract timestamp from log line with consistent ISO format"""
         # Use pattern framework for timestamp extraction
-        timestamp_result = self.pattern_interface.parse_log_line(line)
+        try:
+            timestamp_result = self.pattern_interface.parse_log_line(line)
+            
+            if timestamp_result['status'] == 'matched' and 'timestamp' in timestamp_result['pattern_name']:
+                match_data = timestamp_result['match_data']
+                if all(key in match_data for key in ['year', 'month', 'day', 'hour', 'minute', 'second']):
+                    # Format timestamp with microseconds if present (preserve month name format)
+                    microsecond = match_data.get('microsecond', '0')
+                    if microsecond:
+                        # Pad to 6 digits if needed
+                        microsecond = microsecond.ljust(6, '0')[:6]
+                        return f"{match_data['year']} {match_data['month']} {match_data['day']} {match_data['hour']}:{match_data['minute']}:{match_data['second']}.{microsecond}"
+                    else:
+                        return f"{match_data['year']} {match_data['month']} {match_data['day']} {match_data['hour']}:{match_data['minute']}:{match_data['second']}"
+        except Exception as e:
+            self.logger.debug(f"Pattern framework timestamp extraction failed: {e}")
         
-        if timestamp_result['status'] == 'matched' and 'timestamp' in timestamp_result['pattern_name']:
-            match_data = timestamp_result['match_data']
-            if all(key in match_data for key in ['year', 'month', 'day', 'hour', 'minute', 'second']):
-                return f"{match_data['year']} {match_data['month']} {match_data['day']} {match_data['hour']}:{match_data['minute']}:{match_data['second']}"
-        
-        # Fallback: try to extract timestamp with regex
+        # Fallback: try to extract timestamp with regex (handle microseconds)
         timestamp_patterns = [
-            r'(\d{4})\s+(\w{3})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})',  # 2023 Dec 15 14:30:25
-            r'(\d{2})/(\d{2})/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})',        # 12/15/2023 14:30:25
-            r'(\d{4}-\d{2}-\d{2})\s+(\d{2}):(\d{2}):(\d{2})'            # 2023-12-15 14:30:25
+            (r'(\d{4})\s+(\w{3})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\.(\d+)', True),   # 2023 Dec 15 14:30:25.123456
+            (r'(\d{4})\s+(\w{3})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})', False),         # 2023 Dec 15 14:30:25
+            (r'(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})', False),              # 2023-12-15 14:30:25
         ]
         
-        for pattern in timestamp_patterns:
+        for pattern, has_microseconds in timestamp_patterns:
             match = re.search(pattern, line)
             if match:
-                return ' '.join(match.groups())
+                groups = match.groups()
+                if has_microseconds and len(groups) >= 7:
+                    year, month, day, hour, minute, second, microsecond = groups[:7]
+                    microsecond = microsecond.ljust(6, '0')[:6]
+                    return f"{year} {month} {day} {hour}:{minute}:{second}.{microsecond}"
+                elif len(groups) >= 6:
+                    year, month, day, hour, minute, second = groups[:6]
+                    return f"{year} {month} {day} {hour}:{minute}:{second}"
         
         return ""
     

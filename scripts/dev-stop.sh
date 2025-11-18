@@ -170,10 +170,52 @@ stop_all_services() {
     
     # Clean up any orphaned processes
     print_status $BLUE "Checking for orphaned processes..."
-    local orphaned_pids=$(pgrep -f "uvicorn.*app.main:app" 2>/dev/null || true)
-    if [ -n "$orphaned_pids" ]; then
+    
+    # Kill any uvicorn processes (multiple patterns to catch all variants)
+    local orphaned_uvicorn=$(pgrep -f "uvicorn.*app.main:app" 2>/dev/null || true)
+    if [ -z "$orphaned_uvicorn" ]; then
+        orphaned_uvicorn=$(pgrep -f "uvicorn.*main:app" 2>/dev/null || true)
+    fi
+    if [ -z "$orphaned_uvicorn" ]; then
+        orphaned_uvicorn=$(pgrep -f "uvicorn" 2>/dev/null || true)
+    fi
+    if [ -n "$orphaned_uvicorn" ]; then
         print_status $YELLOW "Found orphaned backend processes, stopping them..."
-        echo "$orphaned_pids" | xargs -r kill -9 >/dev/null 2>&1
+        echo "$orphaned_uvicorn" | xargs -r kill -9 >/dev/null 2>&1
+        sleep 1
+    fi
+    
+    # Kill any Python processes that might be running the backend
+    local orphaned_python=$(pgrep -f "python.*app.main" 2>/dev/null || true)
+    if [ -z "$orphaned_python" ]; then
+        orphaned_python=$(pgrep -f "python3.*app.main" 2>/dev/null || true)
+    fi
+    if [ -n "$orphaned_python" ]; then
+        print_status $YELLOW "Found orphaned Python backend processes, stopping them..."
+        echo "$orphaned_python" | xargs -r kill -9 >/dev/null 2>&1
+        sleep 1
+    fi
+    
+    # CRITICAL: Check if anything is using port 8000 and kill it
+    # This catches processes that weren't found by PID file or process name
+    if command -v lsof >/dev/null 2>&1; then
+        local port_pids=$(lsof -ti:8000 2>/dev/null || true)
+        if [ -n "$port_pids" ]; then
+            print_status $YELLOW "Found processes using port 8000, force stopping..."
+            echo "$port_pids" | xargs -r kill -9 >/dev/null 2>&1
+            sleep 2
+            # Verify port is free
+            local still_using=$(lsof -ti:8000 2>/dev/null || true)
+            if [ -n "$still_using" ]; then
+                print_status $RED "Warning: Port 8000 still in use after kill attempt"
+            else
+                print_status $GREEN "Port 8000 is now free"
+            fi
+        fi
+    elif command -v fuser >/dev/null 2>&1; then
+        # Fallback to fuser if lsof is not available
+        fuser -k 8000/tcp >/dev/null 2>&1 || true
+        sleep 2
     fi
     
     local orphaned_frontend=$(pgrep -f "npm.*run.*dev" 2>/dev/null || true)

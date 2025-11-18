@@ -388,9 +388,14 @@ class PatternEngine:
                 logger.error(f"Pattern matching error for '{pattern_def.name}': {e}")
         
         # Sort matches by confidence and priority
+        # Handle case where pattern might not be in registry (shouldn't happen but be safe)
         matches.sort(key=lambda m: (
             -m.confidence,
-            self.registry.patterns[m.pattern_name].priority.value
+            self.registry.patterns.get(m.pattern_name, 
+                PatternDefinition(name=m.pattern_name, pattern='', 
+                category=PatternCategory.EVENT_SPECIFIC, 
+                priority=PatternPriority.LOW, 
+                description='', agent_types=[])).priority.value
         ))
         
         # Record overall performance

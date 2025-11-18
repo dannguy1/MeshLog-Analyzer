@@ -4,11 +4,19 @@ import json
 import os
 import logging
 import sqlite3
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from uuid import UUID, uuid4
-from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
+
+# File locking for cross-machine consistency (fcntl on Linux, available on Unix)
+try:
+    import fcntl
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False  # Windows doesn't have fcntl
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import structlog
@@ -75,32 +83,75 @@ PROJECTS_FILE = os.path.join(settings.DATA_DIR, "projects.json")
 ANALYSES_FILE = os.path.join(settings.DATA_DIR, "analyses.json")
 
 def load_data():
-    """Load data from files"""
+    """Load data from files with path normalization for cross-machine compatibility"""
     try:
         if os.path.exists(PROJECTS_FILE):
+            # Load original projects data for comparison
             with open(PROJECTS_FILE, 'r') as f:
-                projects_data = json.load(f)
-                for project_id, project_dict in projects_data.items():
-                    project = Project(
-                        id=UUID(project_id),
-                        name=project_dict["name"],
-                        description=project_dict.get("description"),
-                        original_filename=project_dict["original_filename"],
-                        file_size_bytes=project_dict["file_size_bytes"],
-                        upload_timestamp=datetime.fromisoformat(project_dict["upload_timestamp"]),
-                        extraction_path=project_dict["extraction_path"],
-                        status=project_dict["status"],
-                        created_by=project_dict.get("created_by"),
-                        last_modified=datetime.fromisoformat(project_dict["last_modified"]),
-                        analysis_count=project_dict["analysis_count"],
-                        last_analysis_timestamp=datetime.fromisoformat(project_dict["last_analysis_timestamp"]) if project_dict.get("last_analysis_timestamp") else None,
-                        extraction_metadata_path=project_dict.get("extraction_metadata_path"),
-                        project_root_path=project_dict.get("project_root_path", ""),
-                        package_structure_metadata=project_dict.get("package_structure_metadata"),
-                        application_discovery_metadata=project_dict.get("application_discovery_metadata")
-                    )
-                    projects_db[project_id] = project
+                original_projects_data = json.load(f)
+            
+            projects_data = original_projects_data.copy()  # Work with a copy
+            paths_normalized = False
+            
+            for project_id, project_dict in projects_data.items():
+                # Normalize paths based on current DATA_DIR (fixes cross-machine issues)
+                stored_project_root = project_dict.get("project_root_path", "")
+                expected_project_root = os.path.join(settings.DATA_DIR, "projects", project_id)
+                
+                # Update paths if they don't match current DATA_DIR
+                if stored_project_root and stored_project_root != expected_project_root:
+                    # Check if stored path exists
+                    if not os.path.exists(stored_project_root):
+                        # Stored path doesn't exist, use expected path based on current DATA_DIR
+                        logger.info(f"Normalizing paths for project {project_id}: stored path doesn't exist, using current DATA_DIR")
+                        paths_normalized = True
+                        project_dict["project_root_path"] = expected_project_root
+                        
+                        # Update related paths
+                        if project_dict.get("extraction_path"):
+                            old_extraction = project_dict["extraction_path"]
+                            if old_extraction.startswith(stored_project_root):
+                                # Rebuild relative to new project root
+                                relative_part = os.path.relpath(old_extraction, stored_project_root)
+                                project_dict["extraction_path"] = os.path.join(expected_project_root, relative_part)
+                            else:
+                                # Try standard location
+                                project_dict["extraction_path"] = os.path.join(expected_project_root, "extracted")
+                        
+                        if project_dict.get("extraction_metadata_path"):
+                            old_metadata = project_dict["extraction_metadata_path"]
+                            if old_metadata.startswith(stored_project_root):
+                                relative_part = os.path.relpath(old_metadata, stored_project_root)
+                                project_dict["extraction_metadata_path"] = os.path.join(expected_project_root, relative_part)
+                            else:
+                                project_dict["extraction_metadata_path"] = os.path.join(expected_project_root, "extracted", "metadata")
+                
+                project = Project(
+                    id=UUID(project_id),
+                    name=project_dict["name"],
+                    description=project_dict.get("description"),
+                    original_filename=project_dict["original_filename"],
+                    file_size_bytes=project_dict["file_size_bytes"],
+                    upload_timestamp=datetime.fromisoformat(project_dict["upload_timestamp"]),
+                    extraction_path=project_dict["extraction_path"],
+                    status=project_dict["status"],
+                    created_by=project_dict.get("created_by"),
+                    last_modified=datetime.fromisoformat(project_dict["last_modified"]),
+                    analysis_count=project_dict["analysis_count"],
+                    last_analysis_timestamp=datetime.fromisoformat(project_dict["last_analysis_timestamp"]) if project_dict.get("last_analysis_timestamp") else None,
+                    extraction_metadata_path=project_dict.get("extraction_metadata_path"),
+                    project_root_path=project_dict.get("project_root_path", ""),
+                    package_structure_metadata=project_dict.get("package_structure_metadata"),
+                    application_discovery_metadata=project_dict.get("application_discovery_metadata")
+                )
+                projects_db[project_id] = project
+            
             logger.info(f"Loaded {len(projects_db)} projects from file")
+            
+            # Save normalized paths back if any changes were made
+            if paths_normalized:
+                logger.info("Saving normalized project paths back to projects.json")
+                save_data()
     except Exception as e:
         logger.error(f"Failed to load projects: {e}")
 
@@ -167,14 +218,50 @@ def save_data(allow_empty=False):
             import shutil
             shutil.copy2(PROJECTS_FILE, backup_file)
         
-        # Write to temporary file
+        # Write to temporary file with explicit flushing and synchronization
+        # This ensures data is fully written to disk before rename (critical for NFS/network mounts)
         with open(temp_file, 'w') as f:
             json.dump(projects_data, f, indent=2)
+            f.flush()  # Flush Python's buffer to OS
+            try:
+                os.fsync(f.fileno())  # Force OS to write to disk (critical for cross-machine consistency)
+            except OSError as e:
+                # fsync may fail on some filesystems (e.g., network mounts), log but continue
+                logger.debug(f"fsync failed (this is OK on some filesystems): {e}")
         
-        # Atomic rename
+        # Verify file was written correctly before renaming
+        if not os.path.exists(temp_file):
+            raise Exception(f"Temporary file {temp_file} was not created")
+        
+        temp_stat = os.stat(temp_file)
+        if temp_stat.st_size == 0:
+            raise Exception(f"Temporary file {temp_file} is empty after write")
+        
+        # Atomic rename (on most filesystems, this is atomic, but ensure parent directory is synced)
+        try:
+            parent_dir = os.path.dirname(PROJECTS_FILE)
+            if parent_dir:
+                parent_fd = os.open(parent_dir, os.O_RDONLY)
+                try:
+                    os.fsync(parent_fd)  # Sync directory metadata (ensures rename is visible)
+                finally:
+                    os.close(parent_fd)
+        except Exception as e:
+            logger.debug(f"Could not sync parent directory: {e}")
+        
         os.rename(temp_file, PROJECTS_FILE)
+        
+        # Final sync to ensure rename is visible to all readers
+        try:
+            final_fd = os.open(PROJECTS_FILE, os.O_RDONLY)
+            try:
+                os.fsync(final_fd)
+            finally:
+                os.close(final_fd)
+        except Exception as e:
+            logger.debug(f"Could not sync final file: {e}")
             
-        logger.info(f"Saved {len(projects_db)} projects to file (atomic operation)")
+        logger.info(f"Saved {len(projects_db)} projects to file (atomic operation with fsync)")
     except Exception as e:
         logger.error(f"Failed to save data: {e}")
         import traceback
@@ -430,14 +517,35 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://0.0.0.0:3000", "http://192.168.10.5:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Add CORS middleware with dynamic origin support
+# Allow common development origins and any origin that matches the frontend hostname pattern
+cors_origins = settings.CORS_ORIGINS if hasattr(settings, 'CORS_ORIGINS') else [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://0.0.0.0:3000",
+    "http://192.168.10.5:3000",
+    # Allow any IP-based origin for cross-machine development access
+    "http://192.168.*.*:3000",  # Pattern matching (if supported)
+]
+
+# In development, allow all origins for cross-machine access
+# In production, use configured CORS_ORIGINS
+if settings.ENVIRONMENT == "development" or settings.DEBUG:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allow all origins in development for cross-machine access
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Add security and monitoring middleware
 # app.add_middleware(RequestMetricsMiddleware, metrics_collector)
@@ -952,30 +1060,153 @@ async def validate_data_consistency_endpoint():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/v1/projects")
-async def list_projects():
-    """List all projects"""
+async def list_projects(refresh: bool = Query(False, description="Force reload from disk")):
+    """List all projects - reads from disk to ensure consistency across browsers/machines
+    
+    Args:
+        refresh: If True, reload from disk before returning. Default False (uses current memory cache).
+                 Note: For cross-machine consistency, this endpoint always reads from disk (source of truth).
+    """
     try:
-        projects = []
-        for project_id, project in projects_db.items():
-            projects.append({
-                "id": project_id,
-                "name": project.name,
-                "description": project.description,
-                "status": project.status,
-                "created_at": project.upload_timestamp.isoformat(),
-                "file_size": project.file_size_bytes
-            })
+        # Always read from disk to ensure consistency across browsers/machines
+        # projects.json is the source of truth per user's architecture design
+        if os.path.exists(PROJECTS_FILE):
+            # Use file locking to ensure we read a consistent state
+            # Retry logic for cases where file might be mid-write
+            max_retries = 3
+            retry_delay = 0.1
+            
+            for attempt in range(max_retries):
+                try:
+                    with open(PROJECTS_FILE, 'r') as f:
+                        # Use file locking to prevent reading during write (if supported)
+                        if HAS_FCNTL:
+                            try:
+                                fcntl.flock(f.fileno(), fcntl.LOCK_SH)  # Shared lock for reading
+                            except (AttributeError, OSError):
+                                # File locking not supported on this filesystem (e.g., some NFS)
+                                pass
+                        
+                        try:
+                            projects_data = json.load(f)
+                        finally:
+                            if HAS_FCNTL:
+                                try:
+                                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)  # Release lock
+                                except (AttributeError, OSError):
+                                    pass
+                        break  # Successfully read, exit retry loop
+                except json.JSONDecodeError as e:
+                    if attempt < max_retries - 1:
+                        # File might be mid-write, wait and retry
+                        logger.debug(f"JSON decode error (attempt {attempt + 1}/{max_retries}), retrying...: {e}")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        # Last attempt failed, raise error
+                        logger.error(f"Failed to parse projects.json after {max_retries} attempts: {e}")
+                        raise
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        logger.debug(f"Error reading projects.json (attempt {attempt + 1}/{max_retries}), retrying...: {e}")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2
+                    else:
+                        logger.error(f"Failed to read projects.json after {max_retries} attempts: {e}")
+                        raise
+        else:
+            projects_data = {}
+            logger.debug("projects.json does not exist, returning empty list")
         
-        return {"projects": projects}
+        projects = []
+        for project_id, project_dict in projects_data.items():
+            try:
+                # Convert dict to Project object for consistent handling
+                project = Project(
+                    id=UUID(project_id),
+                    name=project_dict["name"],
+                    description=project_dict.get("description"),
+                    original_filename=project_dict["original_filename"],
+                    file_size_bytes=project_dict["file_size_bytes"],
+                    upload_timestamp=datetime.fromisoformat(project_dict["upload_timestamp"]),
+                    extraction_path=project_dict.get("extraction_path", ""),
+                    status=project_dict["status"],
+                    created_by=project_dict.get("created_by"),
+                    last_modified=datetime.fromisoformat(project_dict["last_modified"]),
+                    analysis_count=project_dict.get("analysis_count", 0),
+                    last_analysis_timestamp=datetime.fromisoformat(project_dict["last_analysis_timestamp"]) if project_dict.get("last_analysis_timestamp") else None,
+                    extraction_metadata_path=project_dict.get("extraction_metadata_path"),
+                    project_root_path=project_dict.get("project_root_path", ""),
+                    package_structure_metadata=project_dict.get("package_structure_metadata"),
+                    application_discovery_metadata=project_dict.get("application_discovery_metadata")
+                )
+                
+                projects.append({
+                    "id": project_id,
+                    "name": project.name,
+                    "description": project.description,
+                    "status": project.status,
+                    "created_at": project.upload_timestamp.isoformat(),
+                    "file_size": project.file_size_bytes
+                })
+            except Exception as e:
+                logger.warning(f"Failed to parse project {project_id}: {e}")
+                continue
+        
+        # Update in-memory cache to keep it in sync (but don't block on errors)
+        try:
+            if refresh or len(projects) != len(projects_db):
+                # Sync memory cache with disk
+                load_data()
+        except Exception as e:
+            logger.debug(f"Could not sync memory cache: {e}")
+        
+        # Set cache control headers to prevent browser caching
+        response = JSONResponse(content={"projects": projects})
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
         
     except Exception as e:
         logger.error(f"Failed to list projects: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/v1/projects/{project_id}")
-async def get_project(project_id: str):
-    """Get project details including package metadata"""
+async def get_project(project_id: str, refresh: bool = Query(False, description="Force reload from disk")):
+    """Get project details including package metadata - reads from disk for consistency
+    
+    Args:
+        refresh: If True, reload from disk before returning. Default False.
+    """
     try:
+        # Reload from disk if refresh requested or if project not in memory
+        if refresh or project_id not in projects_db:
+            if os.path.exists(PROJECTS_FILE):
+                with open(PROJECTS_FILE, 'r') as f:
+                    projects_data = json.load(f)
+                    if project_id in projects_data:
+                        project_dict = projects_data[project_id]
+                        project = Project(
+                            id=UUID(project_id),
+                            name=project_dict["name"],
+                            description=project_dict.get("description"),
+                            original_filename=project_dict["original_filename"],
+                            file_size_bytes=project_dict["file_size_bytes"],
+                            upload_timestamp=datetime.fromisoformat(project_dict["upload_timestamp"]),
+                            extraction_path=project_dict.get("extraction_path", ""),
+                            status=project_dict["status"],
+                            created_by=project_dict.get("created_by"),
+                            last_modified=datetime.fromisoformat(project_dict["last_modified"]),
+                            analysis_count=project_dict.get("analysis_count", 0),
+                            last_analysis_timestamp=datetime.fromisoformat(project_dict["last_analysis_timestamp"]) if project_dict.get("last_analysis_timestamp") else None,
+                            extraction_metadata_path=project_dict.get("extraction_metadata_path"),
+                            project_root_path=project_dict.get("project_root_path", ""),
+                            package_structure_metadata=project_dict.get("package_structure_metadata"),
+                            application_discovery_metadata=project_dict.get("application_discovery_metadata")
+                        )
+                        projects_db[project_id] = project
+        
         if project_id not in projects_db:
             logger.warning(f"Project not found: {project_id}")
             logger.info(f"Available projects: {list(projects_db.keys())}")
@@ -1074,7 +1305,7 @@ async def get_project(project_id: str):
                     import traceback
                     traceback.print_exc()
         
-        return {
+        response_data = {
             "id": project_id,
             "name": project.name,
             "description": project.description,
@@ -1089,6 +1320,13 @@ async def get_project(project_id: str):
             "package_metadata": package_metadata,
             "applications_detected": applications_detected
         }
+        
+        # Set cache control headers to prevent browser caching
+        response = JSONResponse(content=response_data)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
         
     except HTTPException:
         raise
@@ -1378,42 +1616,87 @@ async def start_application_analysis(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/v1/projects/{project_id}/analyses")
-async def get_project_analyses(project_id: str):
-    """Get all analyses for a project"""
+async def get_project_analyses(project_id: str, refresh: bool = Query(False, description="Force reload from disk")):
+    """Get all analyses for a project - reads from disk for consistency"""
     try:
+        # Reload project from disk if not in memory or refresh requested (consistent with get_project)
+        if refresh or project_id not in projects_db:
+            if os.path.exists(PROJECTS_FILE):
+                with open(PROJECTS_FILE, 'r') as f:
+                    projects_data = json.load(f)
+                    if project_id in projects_data:
+                        project_dict = projects_data[project_id]
+                        project = Project(
+                            id=UUID(project_id),
+                            name=project_dict["name"],
+                            description=project_dict.get("description"),
+                            original_filename=project_dict["original_filename"],
+                            file_size_bytes=project_dict["file_size_bytes"],
+                            upload_timestamp=datetime.fromisoformat(project_dict["upload_timestamp"]),
+                            extraction_path=project_dict.get("extraction_path", ""),
+                            status=project_dict["status"],
+                            created_by=project_dict.get("created_by"),
+                            last_modified=datetime.fromisoformat(project_dict["last_modified"]),
+                            analysis_count=project_dict.get("analysis_count", 0),
+                            last_analysis_timestamp=datetime.fromisoformat(project_dict["last_analysis_timestamp"]) if project_dict.get("last_analysis_timestamp") else None,
+                            extraction_metadata_path=project_dict.get("extraction_metadata_path"),
+                            project_root_path=project_dict.get("project_root_path", ""),
+                            package_structure_metadata=project_dict.get("package_structure_metadata"),
+                            application_discovery_metadata=project_dict.get("application_discovery_metadata")
+                        )
+                        projects_db[project_id] = project
+        
         if project_id not in projects_db:
             raise HTTPException(status_code=404, detail="Project not found")
         
         # Load analyses using ProjectAnalysisManager
         from app.core.config import get_settings
         settings = get_settings()
-        project_manager = ProjectAnalysisManager(settings.DATA_DIR, project_id)
-        analyses = project_manager.list_analyses()
+        try:
+            project_manager = ProjectAnalysisManager(settings.DATA_DIR, project_id)
+            analyses = project_manager.list_analyses()
+        except Exception as e:
+            logger.error(f"Failed to load analyses for project {project_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            # Return empty list instead of failing completely
+            analyses = []
         
         # Convert Analysis objects to dict format
         analyses_data = []
         for analysis in analyses:
-            analysis_data = {
-                "id": str(analysis.id),
-                "project_id": project_id,
-                "status": analysis.status,
-                "progress_percentage": analysis.progress_percentage,
-                "current_stage": analysis.current_stage,
-                "created_timestamp": analysis.created_timestamp.isoformat() if analysis.created_timestamp else None,
-                "started_timestamp": analysis.started_timestamp.isoformat() if analysis.started_timestamp else None,
-                "completed_timestamp": analysis.completed_timestamp.isoformat() if analysis.completed_timestamp else None,
-                "error_message": analysis.error_message,
-                "application_focus": analysis.application_focus,
-                "configuration": analysis.configuration
-            }
-            analyses_data.append(analysis_data)
+            try:
+                analysis_data = {
+                    "id": str(analysis.id),
+                    "project_id": project_id,
+                    "status": analysis.status,
+                    "progress_percentage": analysis.progress_percentage,
+                    "current_stage": analysis.current_stage,
+                    "created_timestamp": analysis.created_timestamp.isoformat() if analysis.created_timestamp else None,
+                    "started_timestamp": analysis.started_timestamp.isoformat() if analysis.started_timestamp else None,
+                    "completed_timestamp": analysis.completed_timestamp.isoformat() if analysis.completed_timestamp else None,
+                    "error_message": analysis.error_message,
+                    "application_focus": analysis.application_focus,
+                    "configuration": analysis.configuration
+                }
+                analyses_data.append(analysis_data)
+            except Exception as e:
+                logger.warning(f"Failed to serialize analysis {getattr(analysis, 'id', 'unknown')}: {e}")
+                continue
         
-        return {"analyses": analyses_data}
+        # Set cache control headers
+        response = JSONResponse(content={"analyses": analyses_data})
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to get project analyses: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/v1/analyses/{analysis_id}/result")
@@ -2285,44 +2568,8 @@ async def get_application_info(project_id: str, app_name: str):
         logger.error(f"Failed to get application info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/v1/projects/{project_id}/analyses")
-async def get_project_analyses(project_id: str):
-    """Get all analyses for a project"""
-    try:
-        if project_id not in projects_db:
-            raise HTTPException(status_code=404, detail="Project not found")
-        
-        # Load analyses using ProjectAnalysisManager
-        from app.core.config import get_settings
-        settings = get_settings()
-        project_manager = ProjectAnalysisManager(settings.DATA_DIR, project_id)
-        analyses = project_manager.list_analyses()
-        
-        # Convert Analysis objects to dict format
-        analyses_data = []
-        for analysis in analyses:
-            analysis_data = {
-                "id": str(analysis.id),
-                "project_id": project_id,
-                "status": analysis.status,
-                "progress_percentage": analysis.progress_percentage,
-                "current_stage": analysis.current_stage,
-                "created_timestamp": analysis.created_timestamp.isoformat() if analysis.created_timestamp else None,
-                "started_timestamp": analysis.started_timestamp.isoformat() if analysis.started_timestamp else None,
-                "completed_timestamp": analysis.completed_timestamp.isoformat() if analysis.completed_timestamp else None,
-                "error_message": analysis.error_message,
-                "application_focus": analysis.application_focus,
-                "configuration": analysis.configuration
-            }
-            analyses_data.append(analysis_data)
-        
-        return {"analyses": analyses_data}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get project analyses: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# Duplicate endpoint removed - see first definition at line 1618
+# This was a duplicate of GET /api/v1/projects/{project_id}/analyses and has been removed to prevent routing conflicts
 
 @app.get("/api/v1/analyses/{analysis_id}/result")
 async def get_analysis_result(analysis_id: str):

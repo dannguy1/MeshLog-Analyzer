@@ -2,9 +2,35 @@ import axios from 'axios'
 
 // Get API base URL from environment variable or default based on environment
 // In containerized deployment, use empty string so API calls go through nginx proxy
-// In development, use localhost:8000 for direct backend access
+// In development, detect hostname dynamically for cross-machine access
 const isDevelopment = import.meta.env.DEV
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (isDevelopment ? 'http://localhost:8000' : '')
+const getApiBaseUrl = () => {
+  // If explicitly set, use that
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL
+  }
+  
+  // In production, use empty string for relative URLs (nginx proxy)
+  if (!isDevelopment) {
+    return ''
+  }
+  
+  // In development, use the same hostname as the frontend (allows cross-machine access)
+  // This ensures when accessing frontend via IP (e.g., 192.168.10.5:3000),
+  // API calls go to the same IP (192.168.10.5:8000) instead of localhost
+  const hostname = window.location.hostname
+  const port = '8000'
+  
+  // Use localhost only if frontend is also on localhost
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `http://localhost:${port}`
+  }
+  
+  // Otherwise use the same hostname as the frontend
+  return `http://${hostname}:${port}`
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 // Create axios instance with default configuration
 export const api = axios.create({

@@ -947,11 +947,21 @@ class Project:
     application_discovery_metadata: Optional[ApplicationDiscoveryMetadata] = None
     
     def get_project_root_path(self) -> str:
-        """Get absolute project root path"""
+        """Get absolute project root path, normalized to current DATA_DIR if needed"""
+        from app.core.config import get_settings
+        settings = get_settings()
+        expected_path = os.path.join(settings.DATA_DIR, "projects", str(self.id))
+        
+        # If no path set or path doesn't match current DATA_DIR, use expected path
         if not self.project_root_path:
-            from app.core.config import get_settings
-            settings = get_settings()
-            self.project_root_path = os.path.join(settings.DATA_DIR, "projects", str(self.id))
+            self.project_root_path = expected_path
+        elif not self.project_root_path.startswith(settings.DATA_DIR):
+            # Path is from different machine's DATA_DIR, normalize it
+            if not os.path.exists(self.project_root_path):
+                # Old path doesn't exist, use new one
+                self.project_root_path = expected_path
+            # else: keep old path if it exists (might be on shared storage)
+        
         return self.project_root_path
     
     def get_extraction_path(self) -> str:
