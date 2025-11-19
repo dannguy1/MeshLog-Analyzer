@@ -3,8 +3,28 @@
 MeshLog documentation is organized by purpose. Use the sections below to quickly find the material you need.
 
 ## Overview
+
+### 📊 Executive Materials (Start Here for Leadership Reviews)
+
+**Technical Innovation Documents:**
+- **[MeshLog_Executive_OnePager.md](overview/MeshLog_Executive_OnePager.md)** – ⭐ **Technical Vision Brief** (1-page overview emphasizing WNC's WiFi SON quality demonstration and troubleshooting intelligence)
+- **[WNC_MeshLog_Technical_Presentation.md](overview/WNC_MeshLog_Technical_Presentation.md)** – **Technical Innovation Deck** (16 slides on WiFi intelligence capabilities, SON validation, and competitive differentiation)
+- **[WNC_MeshLog_Technical_Vision.md](overview/WNC_MeshLog_Technical_Vision.md)** – **Comprehensive Technical Vision** (60+ pages covering WiFi SON expertise, AI/ML strategy, three-phase roadmap, expansion strategy)
+- **[WNC_Mesh_Case_Study.md](overview/WNC_Mesh_Case_Study.md)** – **Background Context** ("Strong Signal, Poor Performance" problem and WNC SON solution)
+
+**Key Innovation Themes:**
+- **Dual Value Proposition**: Quality demonstration platform + Advanced troubleshooting intelligence
+- Validating WNC's SON technology (sticky client mitigation, backhaul optimization, adaptive RRM, load balancing)
+- Leveraging WNC's 15+ years WiFi Mesh expertise (802.11k/v/r protocols, channel management, topology optimization)
+- Domain-specific AI pattern recognition (200+ WiFi patterns vs. generic log analysis)
+- Context-aware intelligence (deployment-type baselines, RF environment understanding)
+- Knowledge accumulation flywheel (pattern libraries, failure signatures, best practices)
+- Platform expansion path: WiFi Mesh → Enterprise WiFi → Public WiFi → IoT → Security
+
+**Target Audience:** Technical leadership, product management, engineering teams, technical customers, solution architects, sales/marketing teams
+
+### 📖 Technical Overview
 - **[SYSTEM_SUMMARY.md](overview/SYSTEM_SUMMARY.md)** – End-to-end implementation snapshot
-- **[MeshLog_Executive_Summary.md](overview/MeshLog_Executive_Summary.md)** – Business value and positioning
 - **[MeshLog_Concept_Review_Overview.md](overview/MeshLog_Concept_Review_Overview.md)** – Concept evaluation narrative
 - **[IMPLEMENTATION_PLAN_COMPLETION_REPORT.md](overview/IMPLEMENTATION_PLAN_COMPLETION_REPORT.md)** – Program status and remaining work
 
