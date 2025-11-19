@@ -57,22 +57,65 @@ class ACSLogParser:
                     result = self.pattern_interface.parse_log_line(line, line_num)
                     if result['status'] == 'matched':
                         lines_matched += 1
+                        pattern_name = result.get('pattern_name', 'unknown')
+                        all_matches = result.get('all_matches', [])
+                        
+                        # Log diagnostic info for component identifier matches
+                        if pattern_name == 'wnc_component_acs':
+                            # Check if there are other matches that should have been preferred
+                            event_matches = [m for m in all_matches if m.get('name') != 'wnc_component_acs']
+                            if event_matches:
+                                self.logger.warning(f"Line {line_num}: Component identifier selected but event-specific patterns available: {[m.get('name') for m in event_matches]}. Line: {line[:150]}")
+                            else:
+                                # Only component identifier matched - log sample for debugging
+                                if lines_processed % 100 == 0:
+                                    self.logger.debug(f"Line {line_num}: Only component identifier matched, no event-specific patterns. Line: {line[:150]}")
+                        
                         self._process_pattern_match(result, line, line_num)
                     else:
                         # Log debug info for lines that contain 'wnc-acs' but don't match patterns
                         # Only log a sample to avoid log spam (log every 100th line)
                         if lines_processed % 100 == 0:
-                            self.logger.debug(f"Line {line_num} contains 'wnc-acs' but didn't match any patterns: {line[:100]}")
+                            self.logger.debug(f"Line {line_num} contains 'wnc-acs' but didn't match any patterns: {line[:150]}")
         except Exception as e:
             self.logger.warning(f"Error processing file {log_file}: {e}")
         
         self.lines_processed += lines_processed
         self.lines_matched += lines_matched
+        
+        # Log summary statistics
+        if lines_processed > 0:
+            match_rate = (lines_matched / lines_processed) * 100
+            events_created = len(self.events)
+            component_id_matches = sum(1 for e in self.events if e.get('pattern_name') == 'wnc_component_acs')
+            
+            self.logger.info(f"File {log_file}: Processed {lines_processed} lines, matched {lines_matched} ({match_rate:.1f}% match rate), created {events_created} events")
+            
+            if lines_matched > 0 and events_created == 0:
+                self.logger.error(f"File {log_file}: {lines_matched} pattern matches but 0 events created - all matches may be component identifiers being skipped")
+            
+            if lines_matched == 0 and lines_processed > 100:
+                self.logger.warning(f"File {log_file}: No pattern matches found despite {lines_processed} lines containing 'wnc-acs' - check pattern definitions")
+            
+            # Log pattern distribution for debugging
+            if events_created > 0:
+                pattern_counts = {}
+                for event in self.events:
+                    pattern_name = event.get('pattern_name', 'unknown')
+                    pattern_counts[pattern_name] = pattern_counts.get(pattern_name, 0) + 1
+                self.logger.info(f"Event pattern distribution: {pattern_counts}")
+        
         return lines_processed, lines_matched
     
     def _process_pattern_match(self, result: dict, line: str, line_num: int) -> None:
         """Process a pattern match result"""
         try:
+            # Skip component identifier patterns - they're used for filtering, not event creation
+            if result.get('pattern_name') == 'wnc_component_acs':
+                # Component identifier matched but no event-specific pattern - skip this line
+                # This should be rare with the fix, but handle it gracefully
+                return
+            
             event = {
                 'timestamp': self._extract_timestamp(line),
                 'pattern_name': result['pattern_name'],

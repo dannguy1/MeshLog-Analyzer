@@ -341,10 +341,22 @@ class LogParser:
                 return "general"
         
         elif application == "wnc-acs":
-            if "channel" in message_lower or "scan" in message_lower:
-                return "channel-management"
+            # Map to frontend filter categories: scanning, detection, optimization, analysis, compliance
+            if "scan" in message_lower and ("channel" in message_lower or "frequency" in message_lower):
+                return "scanning"
             elif "interference" in message_lower or "noise" in message_lower:
-                return "interference-detection"
+                return "detection"
+            elif "channel" in message_lower and ("switch" in message_lower or "change" in message_lower or "select" in message_lower):
+                return "optimization"
+            elif "spectrum" in message_lower or "frequency" in message_lower or "bandwidth" in message_lower or "analysis" in message_lower:
+                return "analysis"
+            elif "regulatory" in message_lower or "compliance" in message_lower or "legal" in message_lower or "dfs" in message_lower:
+                return "compliance"
+            elif "error" in message_lower or "fail" in message_lower:
+                return "errors"
+            elif "channel" in message_lower:
+                # Channel-related but not switching - default to scanning
+                return "scanning"
             else:
                 return "general"
         

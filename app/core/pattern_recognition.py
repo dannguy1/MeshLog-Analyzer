@@ -380,8 +380,11 @@ class PatternEngine:
                         time.perf_counter() - pattern_start
                     )
                     
-                    # Early exit for high-confidence matches
-                    if confidence > 0.9 and pattern_def.priority == PatternPriority.CRITICAL:
+                    # Early exit for high-confidence matches, but NOT for component identifiers
+                    # Component identifiers should be used for filtering, not as primary matches
+                    # We want to continue matching to find event-specific patterns
+                    if (confidence > 0.9 and pattern_def.priority == PatternPriority.CRITICAL and 
+                        pattern_def.category != PatternCategory.COMPONENT_ID):
                         break
             
             except Exception as e:
@@ -497,8 +500,17 @@ class AgentPatternInterface:
         if not matches:
             return {'status': 'no_match', 'line': line}
         
-        # Return the highest confidence match
-        best_match = matches[0]
+        # Prefer event-specific patterns over component identifiers
+        # Component identifiers are used for filtering but shouldn't be the primary match
+        event_matches = [m for m in matches if self.registry.patterns.get(m.pattern_name) and 
+                        self.registry.patterns[m.pattern_name].category != PatternCategory.COMPONENT_ID]
+        
+        if event_matches:
+            # Use the best event-specific match
+            best_match = event_matches[0]
+        else:
+            # Fallback to best match if no event-specific patterns matched
+            best_match = matches[0]
         
         return {
             'status': 'matched',

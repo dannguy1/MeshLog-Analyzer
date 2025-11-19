@@ -204,11 +204,24 @@ class WNCAcsAgent(AgentInterface):
         for log_file in log_paths:
             try:
                 lines_processed, lines_matched = self.log_parser.process_log_file(log_file)
-                self.logger.info(f"Processed {log_file}: {lines_processed} lines, {lines_matched} matched")
+                events = self.log_parser.get_events()
+                self.logger.info(f"Processed {log_file}: {lines_processed} lines processed, {lines_matched} pattern matches, {len(events)} events created")
+                
+                # Log event type distribution for debugging
+                if events:
+                    event_types = {}
+                    for event in events:
+                        event_type = event.get('event_type', 'unknown')
+                        event_types[event_type] = event_types.get(event_type, 0) + 1
+                    self.logger.info(f"Event type distribution: {event_types}")
+                elif lines_matched > 0:
+                    self.logger.warning(f"Pattern matches found ({lines_matched}) but no events created - check event processing logic")
             except Exception as e:
                 self.logger.warning(f"Error processing {log_file}: {e}")
         
-        return self.log_parser.get_events()
+        events = self.log_parser.get_events()
+        self.logger.info(f"Total events parsed: {len(events)} from {len(log_paths)} files")
+        return events
     
     def _perform_core_analysis(self, events: list) -> dict:
         """Perform core analysis using analysis engine"""

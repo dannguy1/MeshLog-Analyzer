@@ -1543,63 +1543,120 @@ async def start_application_analysis(
 ):
     """Start analysis for a specific application"""
     try:
+        logger.info(f"Starting application analysis: project_id={project_id}, application_name={application_name}")
+        
         if project_id not in projects_db:
+            logger.error(f"Project not found: {project_id}")
             raise HTTPException(status_code=404, detail="Project not found")
         
         project = projects_db[project_id]
         
         if project.status != "completed":
+            logger.error(f"Project not ready for analysis: {project_id} (status: {project.status})")
             raise HTTPException(status_code=400, detail="Project not ready for analysis")
         
         # Validate application name
         supported_applications = ["wnc-steer", "wnc-acs", "wnc-tpyopt", "otbr-agent"]
         if application_name not in supported_applications:
+            logger.error(f"Unsupported application: {application_name}")
             raise HTTPException(
                 status_code=400, 
                 detail=f"Unsupported application: {application_name}. Supported: {supported_applications}"
             )
         
-        # Get applications_detected from project endpoint response
+        # Get applications_detected from project object (preferred) or endpoint response (fallback)
         applications_detected = []
         try:
-            # Get project details to extract applications_detected
-            project_response = await get_project(project_id)
-            applications_detected = project_response.get('applications_detected', [])
+            # First, try to get from project object directly (more efficient)
+            if project.package_structure_metadata:
+                if isinstance(project.package_structure_metadata, dict):
+                    applications_detected = project.package_structure_metadata.get('applications_detected', [])
+                else:
+                    applications_detected = getattr(project.package_structure_metadata, 'applications_detected', [])
+            
+            # If still empty, try application_discovery_metadata
+            if not applications_detected and project.application_discovery_metadata:
+                if isinstance(project.application_discovery_metadata, dict):
+                    applications_detected = [app.get('application_name') for app in project.application_discovery_metadata.get('applications', [])]
+                else:
+                    applications_detected = [app.application_name for app in getattr(project.application_discovery_metadata, 'applications', [])]
+            
+            # If still empty, try calling get_project endpoint as fallback
+            if not applications_detected:
+                logger.warning(f"No applications_detected from project object, trying get_project endpoint")
+                try:
+                    project_response = await get_project(project_id)
+                    applications_detected = project_response.get('applications_detected', [])
+                    logger.info(f"Applications detected via get_project endpoint: {applications_detected}")
+                except Exception as e:
+                    logger.warning(f"Failed to get applications from get_project endpoint: {e}")
+            
+            logger.info(f"Final applications detected in project: {applications_detected}")
         except Exception as e:
-            logger.warning(f"Failed to get applications for project {project_id}: {e}")
+            logger.error(f"Failed to get applications for project {project_id}: {e}", exc_info=True)
         
-        # Check if application exists in project
-        if not applications_detected or application_name not in applications_detected:
+        # Normalize application names for comparison (handle case sensitivity and format differences)
+        normalized_detected = [app.lower().replace('_', '-') for app in applications_detected]
+        normalized_requested = application_name.lower().replace('_', '-')
+        
+        # Check if application exists in project (with normalization)
+        if not applications_detected:
+            logger.error(f"No applications detected in project {project_id}. Project status: {project.status}")
+            raise HTTPException(
+                status_code=400, 
+                detail=f"No applications detected in project. Please ensure the project has been processed and applications have been discovered."
+            )
+        
+        if normalized_requested not in normalized_detected:
+            logger.error(f"Application {application_name} (normalized: {normalized_requested}) not found in project. Available: {applications_detected} (normalized: {normalized_detected})")
             raise HTTPException(
                 status_code=400, 
                 detail=f"Application {application_name} not found in project. Available: {applications_detected}"
             )
         
         # Create analysis record for specific application
-        analysis = Analysis(
-            project_id=UUID(project_id),
-            configuration=config or {
-                "time_series_analysis": True,
-                "anomaly_detection": True,
-                "pattern_recognition": True,
-                "correlation_analysis": True,
-                "applications": [application_name]  # Focus on single application
-            },
-            status="queued",
-            application_focus=application_name
-        )
+        try:
+            analysis = Analysis(
+                project_id=UUID(project_id),
+                configuration=config or {
+                    "time_series_analysis": True,
+                    "anomaly_detection": True,
+                    "pattern_recognition": True,
+                    "correlation_analysis": True,
+                    "applications": [application_name]  # Focus on single application
+                },
+                status="queued",
+                application_focus=application_name
+            )
+            logger.info(f"Created analysis record: {analysis.id}")
+        except Exception as e:
+            logger.error(f"Failed to create analysis record: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to create analysis record: {str(e)}")
         
         # Store analysis using ProjectAnalysisManager
-        from app.core.config import get_settings
-        settings = get_settings()
-        project_manager = ProjectAnalysisManager(settings.DATA_DIR, project_id)
-        project_manager.save_analysis(analysis)
+        try:
+            from app.core.config import get_settings
+            settings = get_settings()
+            project_manager = ProjectAnalysisManager(settings.DATA_DIR, project_id)
+            project_manager.save_analysis(analysis)
+            logger.info(f"Saved analysis to ProjectAnalysisManager: {analysis.id}")
+        except Exception as e:
+            logger.error(f"Failed to save analysis: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to save analysis: {str(e)}")
         
         # Save to file
-        save_data()
+        try:
+            save_data()
+        except Exception as e:
+            logger.warning(f"Failed to save data to file: {e}")
         
         # Start application-specific analysis in background
-        background_tasks.add_task(run_application_analysis_background, str(analysis.id), project_id, application_name)
+        try:
+            background_tasks.add_task(run_application_analysis_background, str(analysis.id), project_id, application_name)
+            logger.info(f"Started background task for analysis: {analysis.id}")
+        except Exception as e:
+            logger.error(f"Failed to start background task: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to start background task: {str(e)}")
         
         return {
             "analysis_id": str(analysis.id),
@@ -1612,8 +1669,8 @@ async def start_application_analysis(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to start application analysis: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to start application analysis: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to start application analysis: {str(e)}")
 
 @app.get("/api/v1/projects/{project_id}/analyses")
 async def get_project_analyses(project_id: str, refresh: bool = Query(False, description="Force reload from disk")):
@@ -2150,12 +2207,22 @@ def categorize_event_for_application(message: str, application: str) -> str:
             return "general"
     
     elif application == "wnc-acs":
-        if "channel" in message_lower or "scan" in message_lower:
-            return "channel_management"
+        # Map to frontend filter categories: scanning, detection, optimization, analysis, compliance
+        if "scan" in message_lower and ("channel" in message_lower or "frequency" in message_lower):
+            return "scanning"
         elif "interference" in message_lower or "noise" in message_lower:
-            return "interference_detection"
+            return "detection"
+        elif "channel" in message_lower and ("switch" in message_lower or "change" in message_lower or "select" in message_lower):
+            return "optimization"
+        elif "spectrum" in message_lower or "frequency" in message_lower or "bandwidth" in message_lower or "analysis" in message_lower:
+            return "analysis"
+        elif "regulatory" in message_lower or "compliance" in message_lower or "legal" in message_lower or "dfs" in message_lower:
+            return "compliance"
         elif "error" in message_lower or "fail" in message_lower:
             return "errors"
+        elif "channel" in message_lower:
+            # Channel-related but not switching - default to scanning
+            return "scanning"
         else:
             return "general"
     
