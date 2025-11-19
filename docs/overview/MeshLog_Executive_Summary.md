@@ -1,8 +1,8 @@
-# MeshLog System - Executive Summary
+# MeshLog Analyzer - Executive Summary
 
 ## 🎯 Project Overview
 
-**MeshLog** is a specialized log analysis platform designed for **PrplVAS LCM applications**. The system provides intelligent analysis, real-time monitoring, and actionable insights specifically tailored to PrplVAS LCM log patterns and behaviors.
+**MeshLog Analyzer** (PrplVAS LCM Log Analysis System) is a specialized log analysis platform designed for **PrplVAS LCM applications**. The system provides intelligent analysis, real-time monitoring, and actionable insights specifically tailored to PrplVAS LCM log patterns and behaviors.
 
 ### **PrplVAS LCM Specialization**
 - **Purpose-Built**: Designed specifically for PrplVAS LCM application logs
@@ -14,12 +14,12 @@
 
 ## ✅ Production-Ready System
 
-The MeshLog system is ready for immediate deployment and use with comprehensive PrplVAS LCM analysis capabilities.
+The MeshLog Analyzer is ready for immediate deployment and use with comprehensive PrplVAS LCM analysis capabilities.
 
 ## 🚀 Key Business Value for PrplVAS LCM
 
 ### **PrplVAS LCM-Specific Analysis**
-- **Intelligent Processing**: Automatically processes PrplVAS LCM log files (.tar, .tar.gz formats)
+- **Intelligent Processing**: Automatically processes PrplVAS LCM log files (.tar, .tar.gz, .tgz formats)
 - **Smart Detection**: Identifies PrplVAS LCM application states, anomalies, and performance issues
 - **Time Savings**: Reduces PrplVAS LCM analysis time from hours to minutes
 - **Current Capability**: LCM log package processing
@@ -41,7 +41,7 @@ The MeshLog system is ready for immediate deployment and use with comprehensive 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   PrplVAS LCM   │    │   MeshLog       │    │   PrplVAS LCM   │
-│   Log Files     │───►│   Processing    │───►│   Insights &    │
+│   Log Files     │───►│   Analyzer      │───►│   Insights &    │
 │   (.tar/.gz)    │    │   Engine        │    │   Predictions   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                               │
@@ -68,13 +68,13 @@ The MeshLog system is ready for immediate deployment and use with comprehensive 
 - **Current Support**: Handles PrplVAS LCM compressed log packages (.tar, .tar.gz, .tgz)
 - **Initial Focus**: WiFi Mesh applications with expansion to all PrplVAS LCM applications
 - **Automatic Classification**: Identifies and categorizes PrplVAS LCM application states and behaviors
-- **Scalable Storage**: Efficient PrplVAS LCM data storage with fast retrieval capabilities
+- **Scalable Storage**: Efficient PrplVAS LCM data storage with SQLite and Redis
 - **Future Evolution**: Real-time syslog service for continuous LCM monitoring
 
 ### **PrplVAS LCM Analysis Workflow**
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   PrplVAS LCM   │───►│   Evolution AI  │───►│   Progress      │
+│   PrplVAS LCM   │───►│   Intelligent   │───►│   Progress      │
 │   Raw Log Data  │    │   Analysis      │    │   & Failure     │
 │                 │    │   Engine        │    │   Predictions   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
@@ -93,7 +93,7 @@ The MeshLog system is ready for immediate deployment and use with comprehensive 
 - **Predictive Analytics**: Forecasts PrplVAS LCM application failures and performance trends
 - **Root Cause Analysis**: Pinpoints the source of PrplVAS LCM issues
 - **Progress Monitoring**: Tracks PrplVAS LCM application execution progress in real-time
-- **Evolution Learning**: Continuously improves analysis accuracy as PrplVAS LCM logs evolve
+- **Pattern Learning**: Continuously improves analysis accuracy as PrplVAS LCM logs evolve
 
 ### **User Interface**
 - **Modern Web Interface**: Intuitive, responsive design accessible from any device
@@ -105,14 +105,14 @@ The MeshLog system is ready for immediate deployment and use with comprehensive 
 ### **Agent Architecture**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    MeshLog System                            │
+│                    MeshLog Analyzer                          │
 │  ┌─────────────────┐    ┌─────────────────────────────────┐ │
 │  │   Integrated     │    │     Service-Based               │ │
 │  │   Agents         │    │     Agents                      │ │
 │  │ (Built-in AI)    │    │  (External Services)           │ │
 │  └─────────────────┘    └─────────────────────────────────┘ │
 │           │                           │                     │
-│           └───────────┬───────────────┘                     │
+│           └──────────────────┬─────────────────┘                     │
 │                       ▼                                     │
 │              ┌─────────────────┐                            │
 │              │   Smart Router  │                            │
@@ -134,6 +134,31 @@ The MeshLog system is ready for immediate deployment and use with comprehensive 
 │   Agent         │  │   Agent         │  │   Agent         │
 │                 │  │                 │  │                 │
 │ • WiFi Mesh     │  │ • WiFi Mesh     │  │ • WiFi Mesh     │
+│   Channel       │  │   Client        │  │   Topology      │
+│   Analysis      │  │   Steering      │  │   Optimization  │
+│ • Failure       │  │ • Progress      │  │ • Performance   │
+│   Prediction    │  │   Tracking      │  │   Monitoring    │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 ▼
+                    ┌─────────────────┐
+                    │   Future:        │
+                    │   All PrplVAS    │
+                    │   LCM Agents     │
+                    │                 │
+                    │ • Expanding     │
+                    │   Coverage      │
+                    │ • Syslog        │
+                    │   Integration   │
+                    └─────────────────┘
+```
+
+**PrplVAS LCM Agent Capabilities:**
+- **WNC ACS Agent**: WiFi Mesh Auto Channel Selection analysis and failure prediction
+- **WNC Steering Agent**: WiFi Mesh client steering behavior analysis and progress tracking
+- **WNC TPYOPT Agent**: WiFi Mesh topology optimization analysis and performance monitoring
+- **Future Expansion**: All PrplVAS LCM applications with syslog service integration
 │   Channel       │  │   Client        │  │   Topology      │
 │   Analysis      │  │   Steering      │  │   Optimization  │
 │ • Failure       │  │ • Progress      │  │ • Performance   │
@@ -170,11 +195,11 @@ The MeshLog system is ready for immediate deployment and use with comprehensive 
 │  Manual PrplVAS LCM:  ████████████████████████████████    │
 │   Analysis            (Hours to Days)                      │
 │                                                             │
-│  MeshLog System:      ████                                   │
+│  MeshLog Analyzer:    ████                                   │
 │  (PrplVAS LCM)        (Minutes)                            │
 │                                                             │
 │  Speed Improvement:  10x Faster                            │
-│  Evolution Learning:  Continuously Improving                │
+│  Pattern Learning:   Continuously Improving                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -188,7 +213,7 @@ The MeshLog system is ready for immediate deployment and use with comprehensive 
 - **Efficiency Gains**: 10x faster PrplVAS LCM analysis compared to manual processes
 - **Accuracy Improvement**: >95% accuracy in PrplVAS LCM anomaly detection
 - **Failure Prevention**: Proactive PrplVAS LCM failure prediction prevents system downtime
-- **Evolution Benefits**: Continuously improving accuracy as PrplVAS LCM logs evolve
+- **Pattern Learning**: Continuously improving accuracy as PrplVAS LCM logs evolve
 
 ## 🛡️ Enterprise Features
 
